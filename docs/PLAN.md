@@ -188,6 +188,18 @@ interface BestWindow {
 }
 ```
 
+`data/status.json` is a second small file next to it:
+
+```ts
+interface FetchStatus {
+  version: 1;
+  lastAttemptAt: number;            // start of latest cron run
+  lastSuccessAt: number | null;
+  consecutiveFailures: number;      // runs in a row not finished OK, incl. kills
+  lastError: string | null;
+}
+```
+
 ## 5. Spots (`src/shared/spots.ts`)
 
 The spots span ~37 km of coast, more than one ~8 km marine grid cell. Spots
@@ -284,6 +296,14 @@ UI then says it is not worth going). Comfort is reported, never mixed into the s
   lengths, no nulls in required fields within the first 7 days) before use.
 - Build `Forecast`, write `OUT_DIR/forecast.json` atomically (write `.tmp`, rename).
 - **On any failure exit non-zero and leave the previous file untouched.**
+- `OUT_DIR/status.json` (`FetchStatus`, §4), written atomically: at run start
+  `consecutiveFailures` is incremented (so hard kills count) unless
+  `FETCH_RETRY=1`; success resets it to 0 and sets `lastSuccessAt`; a caught
+  failure sets `lastError`. A status write failure never fails the run (noted in
+  the log line). Corrupt/missing file → defaults.
+- Container command (`deploy/docker-compose.yml`): `timeout -s KILL 120` per
+  attempt, one retry after 60 s with `FETCH_RETRY=1`. The app warns when
+  `consecutiveFailures >= FETCH_FAILURE_ALERT` (3, `src/shared/types.ts`).
 - Log one line to stdout per run (timestamp, ok/error, bytes, cells with their spots).
 - No runtime dependencies; a single bundled `fetch.mjs`.
 - Keep recorded API responses in `src/fetcher/fixtures/` and test
@@ -361,7 +381,7 @@ how the score works, link to AEMET coastal warnings, app version/build date.
 - [x] **M2 Fetcher** – live `npm run fetch` writes a valid `forecast.json`; fixture-based
       tests; failure leaves the old file. Compare two tide extremes with a published
       Santander tide table and note the difference in the PR/commit message.
-- [ ] **M3 Shell** – routing, tab bar, spot selector, data loading, stale/empty states, theming.
+- [x] **M3 Shell** – routing, tab bar, spot selector, data loading, stale/empty states, theming.
 - [ ] **M4 Příliv** page.
 - [ ] **M5 Vlny** page.
 - [ ] **M6 Přehled** page.
