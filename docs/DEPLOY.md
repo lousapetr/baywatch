@@ -72,11 +72,33 @@ npm install
 ./scripts/deploy.sh
 ```
 
+Doporučeně nejdřív na notebooku `./scripts/smoke.sh` (viz „Test nginx konfigurace“ níže).
+
 Skript udělá: `npm run check` → `npm run build` → rsync `site/`, `fetcher/`,
 `nginx/` a `docker-compose.yml` na server → `docker compose up -d` → reload
 nginx → jednorázové spuštění fetcheru (vznikne `data/forecast.json`) → výpis stavu.
 
 Očekávaný konec výstupu: služby `web` a `cloudflared` ve stavu `running`.
+
+### Test nginx konfigurace (na notebooku, před nasazením)
+
+```bash
+./scripts/smoke.sh          # port lze změnit: SMOKE_PORT=8090 ./scripts/smoke.sh
+```
+
+Potřebuje docker. Skript (když chybí `dist/site/`, zavolá `npm run build`)
+složí do dočasné složky `site/`, `data/` a `nginx/` stejně jako na serveru,
+spustí `nginx:alpine` se stejnými volumes jako compose a zkontroluje
+status kódy a hlavičky: `/` (no-cache), `/data/forecast.json` (JSON, gzip,
+`max-age=300`), `/data/status.json` (no-cache), `/manifest.webmanifest`
+(`application/manifest+json`), `/sw.js` (no-cache), soubor v `/assets/`
+(`immutable`), ikona, 404 pro neexistující cesty a že `/data/` ani `/assets/`
+nevypisují obsah složky (403). Kontejner po sobě uklidí. Pokud chybí
+`src/web/public/data/forecast.json`, stáhne se čerstvý přes `dist/fetcher/fetch.mjs`.
+
+Konfigurace nginx: každý `location` má vlastní `add_header` (nginx jinak
+dědí hlavičky z nadřazené úrovně jen tehdy, když `location` žádnou nemá),
+`autoindex off`, gzip včetně JSON a webmanifestu.
 
 ## 4. Cron pro stahování dat (jednorázově, na serveru)
 
@@ -106,7 +128,9 @@ začátku běhu, takže se počítá i násilné zabití; běh včetně opaková
 počítá nejvýš jednou. Po úspěchu se počítadlo vynuluje. Když je
 `consecutiveFailures` aspoň 3 (tři hodiny v kuse), aplikace zobrazí upozornění.
 `status.json` je veřejný jako `forecast.json`; nginx ho posílá s
-`Cache-Control: no-cache`, ostatní `/data/` s `max-age=300`. Carstats na 1GB stroji má zálohu ve 3:00 a updaty ve 4:00 –
+`Cache-Control: no-cache`, ostatní `/data/` s `max-age=300`.
+
+Carstats na 1GB stroji má zálohu ve 3:00 a updaty ve 4:00 –
 krátký běh fetcheru jim nevadí.
 
 ## 5. Ověření
@@ -119,9 +143,19 @@ tail fetch.log                    # po první hodině
 
 # odkudkoli
 curl -I https://baywatch.lope.me.uk/
+curl -s https://baywatch.lope.me.uk/data/status.json       # consecutiveFailures: 0 po úspěšném běhu
 curl -s https://baywatch.lope.me.uk/data/forecast.json | head -c 200
 curl -I https://baywatch.lope.me.uk/manifest.webmanifest   # content-type: application/manifest+json
 ```
+
+Jednorázově na serveru před prvním cronem – fetcher spoléhá na busybox `timeout`:
+
+```bash
+docker run --rm node:22-alpine sh -c 'timeout -s KILL 2 sleep 5; echo rc=$?'
+```
+
+Očekávaný výstup: po ~2 s `rc=137`. Chyba s nápovědou (usage) znamená, že
+příkaz v compose je potřeba upravit.
 
 ## 6. Instalace na mobil (PWA)
 
@@ -133,7 +167,9 @@ Aplikace se pak otevírá bez adresního řádku a bez signálu ukáže posledn�
 ## 7. Další nasazení a údržba
 
 - **Nová verze**: `./scripts/deploy.sh` z notebooku. Nainstalované PWA se
-  aktualizují samy při dalším otevření (někdy až napodruhé).
+  aktualizují samy (`autoUpdate`): nový service worker se stáhne při otevření
+  a novou verzi uvidíš po zavření a opětovném otevření aplikace (někdy až napodruhé).
+  Data (`forecast.json`) se berou přes síť (`NetworkFirst`, 5 s) a offline se použije poslední uložená kopie.
 - **Logy**: `docker compose logs --tail 50 web`, `docker compose logs --tail 50 cloudflared`, `tail fetch.log`.
 - **Aktualizace obrazů** (cca měsíčně, spolu s údržbou carstats):
   `cd ~/baywatch && docker compose pull && docker compose --profile job pull && docker compose up -d && docker image prune -f`
@@ -166,8 +202,10 @@ v repu připravené – řekni si a doplním.
 
 ## Neověřeno
 
-- Syntaxi busybox `timeout -s KILL 120 …` v `node:22-alpine` jsem neověřil v kontejneru
-  (logiku jsem ověřil jen s GNU `timeout`); první ruční běh `docker compose run --rm fetcher` to potvrdí.
+- Busybox `timeout -s KILL 120 …` v `node:22-alpine` se ověřuje příkazem v kroku 5
+  (logiku jsem ověřil jen s GNU `timeout`).
+- `docker compose config` je validní (ověřeno), ale nginx ani compose jsem v prostředí bez dockeru
+  nespustil – `scripts/smoke.sh` je určený ke spuštění na notebooku.
 - `deploy/` a `scripts/deploy.sh` jsem psal bez možnosti je spustit proti serveru –
   první nasazení ber jako test.
 - Uživatel `opc`, uid 1000 a Oracle Linux předpokládám podle README carstats.
