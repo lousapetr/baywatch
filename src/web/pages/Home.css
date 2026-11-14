@@ -1,0 +1,110 @@
+
+
+.weather-now {
+  margin: 0;
+}
+
+.nowrap {
+  white-space: nowrap;
+}
+
+.spot-card {
+  margin-top: 12px;
+  padding: 12px;
+}
+
+.spot-card.selected {
+  border-color: var(--accent);
+  box-shadow: inset 4px 0 0 var(--accent);
+}
+
+.spot-main {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.spot-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.spot-name {
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.spot-now .stars {
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.spot-swell {
+  font-variant-numeric: tabular-nums;
+}
+
+.spot-go {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 4px;
+}
+
+.go-label {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+
+.go-when {
+  font-weight: 700;
+}
+
+.outlook {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.outlook a {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  min-height: 48px;
+  color: var(--fg);
+  text-decoration: none;
+  font-variant-numeric: tabular-nums;
+  border-radius: 8px;
+}
+
+.o-day {
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.o-stars {
+  min-width: 34px;
+  padding: 2px 0;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  border-radius: 6px;
+  background: var(--border);
+}
+
+.o-stars.s2 { background: color-mix(in srgb, var(--accent) 25%, var(--surface)); }
+.o-stars.s3 { background: color-mix(in srgb, var(--accent) 45%, var(--surface)); }
+.o-stars.s4,
+.o-stars.s5 { background: var(--accent); color: var(--accent-fg); }
+
+.footnote {
+  margin: 16px 4px 0;
+}

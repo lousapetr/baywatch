@@ -313,13 +313,14 @@ UI then says it is not worth going). Comfort is reported, never mixed into the s
 ## 8. Frontend (`src/web`)
 
 ### Shell
-- Preact + hash routing (`#/`, `#/priliv`, `#/vlny`, `#/o-aplikaci`), hand-rolled – no router lib.
-- Bottom tab bar (Přehled · Příliv · Vlny · O aplikaci), header with spot selector
+- Preact + hash routing (`#/`, `#/priliv`, `#/vlny`, `#/pocasi`, `#/o-aplikaci`), hand-rolled – no router lib.
+- Bottom tab bar (Přehled · Příliv · Vlny · Počasí); O aplikaci is linked from a
+  footnote in Přehled (no tab). Header with spot selector
   (persisted in `localStorage`, default `san-juan-canal`).
 - `data.ts`: fetch `./data/forecast.json` on load, on tab focus and every 15 min.
   Expose `{ forecast, status }` and a helper returning the selected spot's
   cell (`cells.find(c => c.id === spot.cell)`); pages read wave, wind and
-  weather values through it. Show "data z 14:05" in the header; a warning
+  weather values through it. Show "data z so 14. 11. 14:05" in the header; a warning
   chip when `generatedAt` is older than 3 h; a friendly full-page state when
   there is no data at all. A ticking `now` signal (1 min) drives "current" values.
 - Light/dark via CSS custom properties; sea-themed but restrained; system font stack.
@@ -327,14 +328,19 @@ UI then says it is not worth going). Comfort is reported, never mixed into the s
   or `aria-label` summary, touch targets ≥ 44 px.
 
 ### Přehled (`#/`)
-- **Teď** card: tide (↑ stoupá / ↓ klesá, current height, "příliv v 18:20 za 2 h 10 min"),
-  current score stars for the spot, swell `2,4 m · 13 s · SZ`, wind, weather.
-- **Kdy vyrazit** card: the best upcoming window in the next 3 days
-  ("zítra 14–17 h ★★★★ – swell 3,2 m / 14 s od SZ, příliv 16:40"). If nothing
-  reaches 2★: "V příštích dnech nic velkého."
-- **Výhled** strip: 8 days, each with stars of its window and max swell height; tap → Vlny for that day.
-- Safety banner when the window has ≥ 4★ or wave height ≥ 4 m:
+All spots at once, scrolling vertically:
+- **Příliv** card on top (shared by all spots): ↑ stoupá / ↓ klesá, current height,
+  "příliv v 18:20 za 2 h 10 min"; current weather (icon, temp, wind) of the default spot's cell.
+- One **card per spot** (order of `SPOTS`, selected spot highlighted): name, current
+  stars, swell `2,4 m · 13 s · SZ`; **Kdy vyrazit** line – best upcoming window in the
+  next 3 days ("zítra 14–17 h ★★★★ – swell 3,2 m / 14 s od SZ, příliv 16:40"), or
+  "V příštích dnech nic velkého." if nothing reaches 2★; **Výhled** mini strip of
+  7 days from today (stars of each day's window). Tapping the card selects the spot and opens
+  Vlny for the best day; tapping a day in the strip opens Vlny for that day.
+- Safety banner (once, above the spot cards) when any spot's upcoming window has
+  ≥ 4★ or wave height ≥ 4 m:
   „Velké vlny jsou nebezpečné – držte se dál od hrany útesů a mokrých skal.“
+- Footnote with a link to O aplikaci.
 
 ### Příliv (`#/priliv`)
 - SVG tide curve for the next 48 h (15-min series): now marker, labelled
@@ -346,7 +352,11 @@ UI then says it is not worth going). Comfort is reported, never mixed into the s
 - Heights shown as `levelMsl + datumOffsetM`, footnote: times ±30 min, model data, not for navigation.
 
 ### Vlny (`#/vlny`)
-- Day selector (8 days). For the selected day:
+- **Mini dashboard** of all spots for the selected day (compact rows: name, stars,
+  best window time, swell height); tapping a row selects that spot.
+- **Week chart** for the selected spot: hourly score over all 8 days with night
+  shading and day boundaries (optionally swell height line); tapping a day selects it.
+- Day selector (8 days). For the selected day and spot:
   - summary line with the best window and Czech label;
   - hourly rows (daylight emphasised, night dimmed/collapsed): time, stars bar,
     swell height/period, direction arrow (rotated SVG, pointing where waves travel),
@@ -354,7 +364,13 @@ UI then says it is not worth going). Comfort is reported, never mixed into the s
   - small SVG charts over the day: swell height + period, score.
 - Legend explaining the score in two sentences.
 
-### O aplikaci
+### Počasí (`#/pocasi`)
+Shore weather for the selected spot's cell: per day (8 days) weather icon + label,
+min/max air temperature, rain total and max probability, max wind/gust with
+direction, sunrise/sunset, sea temperature. A simple 8-day chart of hourly air
+temperature and rain bars. Today highlighted.
+
+### O aplikaci (`#/o-aplikaci`, no tab)
 Sources and attribution links (Open-Meteo, CC BY 4.0), accuracy caveats,
 how the score works, link to AEMET coastal warnings, app version/build date.
 
@@ -385,6 +401,8 @@ how the score works, link to AEMET coastal warnings, app version/build date.
 - [x] **M4 Příliv** page.
 - [x] **M5 Vlny** page.
 - [x] **M6 Přehled** page.
+- [x] **M6b Feedback** – Přehled with all spots, header date, Vlny dashboard +
+      week chart, Počasí tab, O aplikaci moved out of the tab bar.
 - [ ] **M7 PWA** – manifest, icons, service worker, offline check.
 - [ ] **M8 Release** – `docker compose -f deploy/docker-compose.yml config` validates;
       local smoke test of the nginx config with the built site

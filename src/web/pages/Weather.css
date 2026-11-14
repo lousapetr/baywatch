@@ -1,0 +1,82 @@
+.wx-days {
+  margin: 0 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.wx-day {
+  padding: 10px 8px;
+  border-top: 1px solid var(--border);
+}
+
+.wx-day.today {
+  background: color-mix(in srgb, var(--accent) 10%, transparent);
+  border-radius: 10px;
+  border-top-color: transparent;
+}
+
+.wx-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.wx-icon {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.wx-title {
+  flex: 1;
+  min-width: 0;
+}
+
+.wx-temp {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.wx-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px 12px;
+  margin: 6px 0 0;
+  font-size: 0.8125rem;
+  font-variant-numeric: tabular-nums;
+}
+
+.wx-facts > div {
+  display: flex;
+  gap: 6px;
+}
+
+.wx-facts dt {
+  color: var(--muted);
+}
+
+.wx-facts dd {
+  margin: 0;
+  white-space: nowrap;
+}
+
+.wx-rain {
+  fill: var(--accent);
+  fill-opacity: 0.75;
+}
+
+.wx-line {
+  fill: none;
+  stroke: var(--low);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.lg-t {
+  border-top: 3px solid var(--low);
+}
+
+.lg-r {
+  border-top: 8px solid var(--accent);
+  opacity: 0.75;
+}

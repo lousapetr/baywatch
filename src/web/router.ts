@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'preact/hooks';
 
-export const ROUTES = ['/', '/priliv', '/vlny', '/o-aplikaci'] as const;
+export const ROUTES = ['/', '/priliv', '/vlny', '/pocasi', '/o-aplikaci'] as const;
 export type RoutePath = (typeof ROUTES)[number];
 
 export interface Route {

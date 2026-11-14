@@ -1,0 +1,19 @@
+.wk-sel {
+  fill: var(--accent);
+  fill-opacity: 0.14;
+}
+
+.wk-day.on {
+  fill: var(--fg);
+  font-weight: 700;
+}
+
+.wk-hit {
+  fill: transparent;
+  cursor: pointer;
+}
+
+a:focus-visible .wk-hit {
+  stroke: var(--focus);
+  stroke-width: 2;
+}

@@ -5,6 +5,7 @@ import {
   formatDuration,
   formatNumber,
   formatTime,
+  formatWeekday,
   formatWeekdayDate,
   localDate,
   localHour,
@@ -91,5 +92,11 @@ describe('format', () => {
     expect(weatherInfo(1234).label).toBe('neznámé');
     expect(weatherInfo(0, false)).toEqual({ label: 'jasno', emoji: '🌙' });
     expect(weatherInfo(63, false).emoji).toBe('🌧️');
+  });
+});
+
+describe('formatWeekday', () => {
+  it('gives the short Czech weekday in Madrid', () => {
+    expect(formatWeekday(utc(2026, 11, 14, 12))).toBe('so');
   });
 });

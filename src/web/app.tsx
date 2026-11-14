@@ -7,6 +7,7 @@ import { EmptyState } from './components/EmptyState.tsx';
 import { Home } from './pages/Home.tsx';
 import { Tides } from './pages/Tides.tsx';
 import { Waves } from './pages/Waves.tsx';
+import { Weather } from './pages/Weather.tsx';
 import { About } from './pages/About.tsx';
 
 export function App() {
@@ -19,6 +20,7 @@ export function App() {
   else if (!hasData) page = <EmptyState />;
   else if (route.path === '/priliv') page = <Tides />;
   else if (route.path === '/vlny') page = <Waves />;
+  else if (route.path === '/pocasi') page = <Weather />;
   else page = <Home />;
   return (
     <AppContext.Provider value={{ ...state, route }}>

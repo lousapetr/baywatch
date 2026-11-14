@@ -1,0 +1,76 @@
+.dash {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.dash-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  grid-template-areas: 'name stars' 'name sub';
+  align-items: center;
+  column-gap: 12px;
+  width: 100%;
+  min-height: 44px;
+  padding: 6px 8px;
+  font: inherit;
+  font-size: 0.9375rem;
+  color: var(--fg);
+  text-align: left;
+  background: none;
+  border: 0;
+  border-top: 1px solid var(--border);
+  border-left: 4px solid transparent;
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+}
+
+.dash-name {
+  grid-area: name;
+}
+
+.dash-row .stars {
+  grid-area: stars;
+  justify-self: end;
+  color: var(--accent);
+  letter-spacing: -1px;
+}
+
+.dash-sub {
+  grid-area: sub;
+  justify-self: end;
+  font-size: 0.8125rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.dash-none {
+  grid-area: stars / stars / sub / sub;
+  justify-self: end;
+}
+
+li:first-child > .dash-row {
+  border-top-color: transparent;
+}
+
+.dash-row[aria-pressed='true'] {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  font-weight: 700;
+}
+
+.wk-swell {
+  fill: none;
+  stroke: var(--low);
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+}
+
+.lg-bar {
+  border-top: 8px solid var(--accent);
+  opacity: 0.6;
+}
+
+.lg-sw {
+  border-top: 2px solid var(--low);
+}

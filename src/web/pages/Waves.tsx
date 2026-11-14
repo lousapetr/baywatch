@@ -11,8 +11,13 @@ import { DaySwitch } from '../components/DaySwitch.tsx';
 import { ScoreChart, WaveChart } from '../components/DayCharts.tsx';
 import { SafetyBanner } from '../components/SafetyBanner.tsx';
 import { Stars } from '../components/Stars.tsx';
-import { selectDay } from '../router.ts';
+import { WeekScoreChart } from '../components/WeekScoreChart.tsx';
+import { href, selectDay } from '../router.ts';
+import { windowHours } from '../overview.ts';
+import { dashboardRows } from '../weekChart.ts';
 import { dayIndices, inWindow, maxAt, visibleIndices, windowSummary } from '../wavesDay.ts';
+
+import './Waves.css';
 
 interface RowProps {
   i: number;
@@ -89,7 +94,7 @@ function dayView(forecast: Forecast, sf: SpotForecast, hourly: CellHourly, date:
 }
 
 export function Waves() {
-  const { forecast, spot, cell, route, now } = useApp();
+  const { forecast, spot, setSpotId, cell, route, now } = useApp();
   const [showNight, setShowNight] = useState(false);
   const sf = forecast?.spots.find((s) => s.id === spot.id);
   if (!forecast) return null;
@@ -125,10 +130,64 @@ export function Waves() {
   const scoreLabel = `Hodnocení ${dateLabel}: nejvyšší ${scoreText(bestScore)}.`;
   const bestStars = win?.stars ?? 0;
 
+  const weekLabel = `Hodnocení a výška swellu na 8 dní pro ${spot.name}; vybraný den ${dateLabel}.`;
+  const dayName = (date: string) => {
+    const d = days.find((x) => x.date === date);
+    return d ? formatDayLabel(d.sunrise, now) : date;
+  };
+
   return (
     <>
       <section class="card" aria-labelledby="waves-h">
         <h1 id="waves-h">Vlny</h1>
+        <p class="muted small">Všechna místa – {dateLabel}</p>
+        <ul class="dash">
+          {dashboardRows(forecast.spots, selected).map((r) => (
+            <li key={r.id}>
+              <button type="button" class="dash-row" aria-pressed={r.id === spot.id} onClick={() => setSpotId(r.id)}>
+                <span class="dash-name">{r.name}</span>
+                {r.win ? (
+                  <>
+                    <Stars stars={r.win.stars} />
+                    <span class="dash-sub">
+                      {windowHours(r.win)} · {formatNumber(r.win.swellHeight)} m
+                    </span>
+                  </>
+                ) : (
+                  <span class="muted dash-none">bez dat</span>
+                )}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </section>
+
+      <section class="card" aria-label="Týden">
+        <h2>Týden – {spot.name}</h2>
+        <WeekScoreChart
+          time={forecast.time}
+          days={days}
+          score={sf.score}
+          swellHeight={hourly.swellHeight}
+          selected={selected}
+          today={today}
+          hrefFor={(d) => href('/vlny', { d })}
+          labelFor={dayName}
+          label={weekLabel}
+        />
+        <p class="legend small muted" aria-hidden="true">
+          <span>
+            <span class="lg lg-bar" /> hodnocení (vlevo)
+          </span>
+          <span>
+            <span class="lg lg-sw" /> výška swellu (vpravo)
+          </span>
+          <span>klepnutím vyberete den</span>
+        </p>
+      </section>
+
+      <section class="card" aria-labelledby="day-h">
+        <h2 id="day-h">Vybraný den</h2>
         <DaySwitch path="/vlny" days={days} selected={selected} now={now} label="Den" />
         <p class="w-headline">
           {summary.lead}

@@ -13,6 +13,7 @@ const weekdayFmt = new Intl.DateTimeFormat(LOCALE, {
   day: 'numeric',
   month: 'numeric',
 });
+const weekdayShortFmt = new Intl.DateTimeFormat(LOCALE, { timeZone: TIMEZONE, weekday: 'short' });
 const partsFmt = new Intl.DateTimeFormat('en-US', {
   timeZone: TIMEZONE,
   year: 'numeric',
@@ -54,6 +55,11 @@ export function dayDiff(a: string, b: string): number {
 /** `14:30` */
 export function formatTime(t: number): string {
   return timeFmt.format(ms(t));
+}
+
+/** `so` */
+export function formatWeekday(t: number): string {
+  return weekdayShortFmt.format(ms(t));
 }
 
 /** `so 14. 11.` */

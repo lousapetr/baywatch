@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import type { BestWindow, DayInfo, TideExtreme } from '../shared/types.ts';
+import type { BestWindow, DayInfo, Forecast, TideExtreme } from '../shared/types.ts';
 import {
-  bestUpcoming, hourIndexAt, isWorthGoing, outlookItems, upcomingDates, upcomingMaxWave, windowHours, windowTideText,
+  anySafetyWarning, bestUpcoming, hourIndexAt, isWorthGoing, OUTLOOK_DAYS, outlookItems, summarizeSpot, upcomingDates,
+  upcomingMaxWave, bestOutlookDate, windowHours, windowTideText,
 } from './overview.ts';
 
 // Madrid is UTC+1 on these dates; day starts at 23:00Z the day before.
@@ -86,13 +87,74 @@ describe('upcomingMaxWave', () => {
 });
 
 describe('outlookItems', () => {
-  it('builds one item per day', () => {
-    const swell = time.map((_, i) => (i === 24 + 12 ? 3.2 : 1));
-    const items = outlookItems(days, [win(1, 10, 13, 3)], time, isDay, swell, d0 + 5 * 3600);
+  it('builds one item per day from today on', () => {
+    const items = outlookItems(days, [win(1, 10, 13, 3)], d0 + 5 * 3600);
     expect(items).toHaveLength(4);
-    expect(items[0]).toMatchObject({ top: 'dnes', stars: null, maxSwell: 1 });
-    expect(items[1]).toMatchObject({ top: 'zítra', stars: 3, maxSwell: 3.2 });
+    expect(items[0]).toMatchObject({ top: 'dnes', stars: null });
+    expect(items[1]).toMatchObject({ top: 'zítra', stars: 3 });
     expect(items[2]!.top).toBe('po');
-    expect(items[2]!.bottom).toMatch(/^16\.\s?11\.$/);
+    expect(items[2]!.label).toMatch(/^po 16\.\s?11\.$/);
+  });
+  it('skips past days and stops after OUTLOOK_DAYS', () => {
+    const many: DayInfo[] = Array.from({ length: 9 }, (_, k) => ({
+      date: `2026-11-${String(13 + k).padStart(2, '0')}`,
+      sunrise: d0 + (k - 1) * 86400 + 8 * 3600,
+      sunset: d0 + (k - 1) * 86400 + 18 * 3600,
+    }));
+    const items = outlookItems(many, [], d0 + 5 * 3600);
+    expect(items).toHaveLength(OUTLOOK_DAYS);
+    expect(items[0]!.date).toBe('2026-11-14');
+  });
+});
+
+describe('bestOutlookDate', () => {
+  const it_ = (date: string, stars: number | null) => ({ date, top: '', label: '', stars });
+  it('takes the earliest day with the most stars from 2★', () => {
+    expect(bestOutlookDate([it_('a', 1), it_('b', 3), it_('c', 3), it_('d', null)])).toBe('b');
+    expect(bestOutlookDate([it_('a', 1), it_('b', null)])).toBeNull();
+  });
+});
+
+describe('summarizeSpot / anySafetyWarning', () => {
+  const mk = (stars: number[], wave: number): Forecast =>
+    ({
+      time, isDay, days,
+      tide: { start: d0, step: 900, levelMsl: [], datumOffsetM: 0, extremes: [] },
+      cells: [{ id: 'c', hourly: {
+        waveHeight: time.map(() => wave), swellHeight: time.map(() => 2), swellPeriod: time.map(() => 12), swellDir: time.map(() => 315),
+      } }],
+      spots: [{ id: 's', name: 'Spot', cell: 'c', score: time.map(() => 3), windows: stars.map((st, k) => win(k, 10, 13, st)) }],
+    }) as unknown as Forecast;
+  const now = d0 + 5 * 3600;
+
+  it('summarizes current values, best window and outlook', () => {
+    const s = summarizeSpot(mk([0, 3, 1, 0], 1), 's', now)!;
+    expect(s.nowStars).toBe(3);
+    expect(s.nowSwell).toEqual({ height: 2, period: 12, dir: 315 });
+    expect(s.best?.date).toBe('2026-11-15');
+    expect(s.targetDate).toBe('2026-11-15');
+    expect(s.outlook.map((o) => o.date)).toEqual(days.map((d) => d.date));
+  });
+  it('targets the best later day when the next days are not worth going', () => {
+    const s = summarizeSpot(mk([1, 0, 1, 3], 1), 's', now)!;
+    expect(s.best).toBeNull();
+    expect(s.targetDate).toBe('2026-11-17');
+  });
+  it('has no best window and targets today when nothing is worth going', () => {
+    const s = summarizeSpot(mk([1, 0, 1, 0], 1), 's', now)!;
+    expect(s.best).toBeNull();
+    expect(s.targetDate).toBe('2026-11-14');
+  });
+  it('is null for an unknown spot', () => {
+    expect(summarizeSpot(mk([], 1), 'x', now)).toBeNull();
+  });
+  it('warns on a big window or big waves of any spot', () => {
+    const calm = summarizeSpot(mk([2, 2, 2, 2], 1), 's', now)!;
+    const bigWindow = summarizeSpot(mk([0, 4, 0, 0], 1), 's', now)!;
+    const bigWave = summarizeSpot(mk([2, 2, 2, 2], 4.2), 's', now)!;
+    expect(anySafetyWarning([calm])).toBe(false);
+    expect(anySafetyWarning([calm, bigWindow])).toBe(true);
+    expect(anySafetyWarning([calm, bigWave])).toBe(true);
+    expect(anySafetyWarning([])).toBe(false);
   });
 });

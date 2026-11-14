@@ -1,5 +1,6 @@
-import type { BestWindow, DayInfo, TideAtPeak, TideExtreme } from '../shared/types.ts';
-import { formatNumber, formatTime, localDate, localHour, relativeDay, formatWeekdayDate } from '../shared/format.ts';
+import type { BestWindow, DayInfo, Forecast, TideAtPeak, TideExtreme } from '../shared/types.ts';
+import { formatTime, localDate, localHour, relativeDay, formatWeekdayDate } from '../shared/format.ts';
+import { needsSafetyWarning } from '../shared/safety.ts';
 import { dayIndices, maxAt } from './wavesDay.ts';
 
 const HOUR = 3600;
@@ -72,46 +73,77 @@ export function upcomingMaxWave(time: number[], isDay: boolean[], waveHeight: nu
   return maxAt(waveHeight, idx);
 }
 
+/** Days in the Přehled outlook strip (today included). */
+export const OUTLOOK_DAYS = 7;
+
 export interface OutlookItem {
   date: string;
   /** `dnes`, `zítra` or the short weekday. */
   top: string;
-  /** `14. 11.` */
-  bottom: string;
   stars: number | null;
-  /** Largest daylight swell height (m), null without data. */
-  maxSwell: number | null;
+  /** `zítra 15. 11.` */
   label: string;
 }
 
-/** One item per forecast day: window stars and the largest daylight swell. */
-export function outlookItems(
-  days: DayInfo[],
-  windows: BestWindow[],
-  time: number[],
-  isDay: boolean[],
-  swellHeight: number[],
-  now: number,
-): OutlookItem[] {
-  return days.map((d) => {
-    const w = windows.find((x) => x.date === d.date);
-    const daylight = dayIndices(time, d.date).filter((i) => isDay[i]);
-    const maxSwell = daylight.length ? maxAt(swellHeight, daylight) : null;
-    const [wd = '', ...rest] = formatWeekdayDate(d.sunrise).split(' ');
-    const bottom = rest.join(' ');
-    const top = relativeDay(d.sunrise, now) ?? wd;
-    return {
-      date: d.date,
-      top,
-      bottom,
-      stars: w ? w.stars : null,
-      maxSwell,
-      label: `${top} ${bottom}`,
-    };
-  });
+/** Window stars of each forecast day from today on, at most `OUTLOOK_DAYS`. */
+export function outlookItems(days: DayInfo[], windows: BestWindow[], now: number): OutlookItem[] {
+  const dates = upcomingDates(days, now, OUTLOOK_DAYS);
+  return days
+    .filter((d) => dates.includes(d.date))
+    .map((d) => {
+      const [wd = '', ...rest] = formatWeekdayDate(d.sunrise).split(' ');
+      const top = relativeDay(d.sunrise, now) ?? wd;
+      const w = windows.find((x) => x.date === d.date);
+      return { date: d.date, top, stars: w ? w.stars : null, label: `${top} ${rest.join(' ')}` };
+    });
 }
 
-/** `3,2 m` or an en dash. */
-export function swellText(m: number | null): string {
-  return m === null ? '–' : `${formatNumber(m)}\u00a0m`;
+/** Earliest date with the most stars, null when no day reaches `MIN_WORTH_STARS`. */
+export function bestOutlookDate(items: OutlookItem[]): string | null {
+  let best: OutlookItem | null = null;
+  for (const o of items) if (o.stars !== null && o.stars > (best?.stars ?? MIN_WORTH_STARS - 1)) best = o;
+  return best?.date ?? null;
+}
+
+export interface SpotSummary {
+  id: string;
+  name: string;
+  /** Stars of the current hour, null outside the series. */
+  nowStars: number | null;
+  /** Swell of the current hour, null outside the series. */
+  nowSwell: { height: number; period: number; dir: number } | null;
+  /** Best upcoming window when it is worth going, else null. */
+  best: BestWindow | null;
+  /** Largest daylight wave height over the upcoming dates (m). */
+  maxWave: number;
+  outlook: OutlookItem[];
+  /** Day to open in Vlny: the best window's day, else the best outlook day worth going, else today. */
+  targetDate: string;
+}
+
+/** Everything the Přehled spot card shows; null when the forecast lacks the spot's data. */
+export function summarizeSpot(forecast: Forecast, spotId: string, now: number): SpotSummary | null {
+  const sf = forecast.spots.find((s) => s.id === spotId);
+  const cell = sf && forecast.cells.find((c) => c.id === sf.cell);
+  if (!sf || !cell) return null;
+  const h = cell.hourly;
+  const i = hourIndexAt(forecast.time, now);
+  const top = bestUpcoming(sf.windows, forecast.days, now);
+  const best = isWorthGoing(top) ? top : null;
+  const outlook = outlookItems(forecast.days, sf.windows, now);
+  return {
+    id: sf.id,
+    name: sf.name,
+    nowStars: i < 0 ? null : sf.score[i]!,
+    nowSwell: i < 0 ? null : { height: h.swellHeight[i]!, period: h.swellPeriod[i]!, dir: h.swellDir[i]! },
+    best,
+    maxWave: upcomingMaxWave(forecast.time, forecast.isDay, h.waveHeight, forecast.days, now),
+    outlook,
+    targetDate: best?.date ?? bestOutlookDate(outlook) ?? localDate(now),
+  };
+}
+
+/** True when any spot's upcoming window or wave height calls for the safety banner. */
+export function anySafetyWarning(summaries: SpotSummary[]): boolean {
+  return summaries.some((s) => needsSafetyWarning(s.best?.stars ?? 0, s.maxWave));
 }

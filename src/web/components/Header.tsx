@@ -1,5 +1,5 @@
 import { SPOTS } from '../../shared/spots.ts';
-import { formatTime } from '../../shared/format.ts';
+import { formatTime, formatWeekdayDate } from '../../shared/format.ts';
 import { isStale, shouldAlertFailures, useApp } from '../data.ts';
 
 export function Header() {
@@ -20,7 +20,7 @@ export function Header() {
         </select>
       </div>
       <div class="header-meta">
-        {forecast && <span>data z {formatTime(forecast.generatedAt)}</span>}
+        {forecast && <span>data z {formatWeekdayDate(forecast.generatedAt)} {formatTime(forecast.generatedAt)}</span>}
         {stale && (
           <span class="chip chip-warn" role="status">
             zastaralá data
