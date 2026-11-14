@@ -384,7 +384,7 @@ how the score works, link to AEMET coastal warnings, app version/build date.
 - [x] **M3 Shell** – routing, tab bar, spot selector, data loading, stale/empty states, theming.
 - [x] **M4 Příliv** page.
 - [x] **M5 Vlny** page.
-- [ ] **M6 Přehled** page.
+- [x] **M6 Přehled** page.
 - [ ] **M7 PWA** – manifest, icons, service worker, offline check.
 - [ ] **M8 Release** – `docker compose -f deploy/docker-compose.yml config` validates;
       local smoke test of the nginx config with the built site
