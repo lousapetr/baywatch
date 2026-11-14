@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+.env.deploy
+*.log
+src/web/public/data/
+coverage/
+.DS_Store
