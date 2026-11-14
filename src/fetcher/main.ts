@@ -1,3 +1,1 @@
-import { greeting } from '../shared/hello.ts';
-
-console.log(`${new Date().toISOString()} ${greeting('fetcher placeholder')}`);
+console.log(`${new Date().toISOString()} fetcher placeholder`);

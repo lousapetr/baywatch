@@ -334,7 +334,7 @@ how the score works, link to AEMET coastal warnings, app version/build date.
 - [x] **M0 Scaffold** – package.json, tsconfig (strict), Vite + Preact, vitest, eslint,
       npm scripts of §3, placeholder page. `npm run check` and `npm run build`
       produce `dist/site/index.html` and `dist/fetcher/fetch.mjs`.
-- [ ] **M1 Shared logic** – types, spots, tide, score, windows, format, geo with tests
+- [x] **M1 Shared logic** – types, spots, tide, score, windows, format, geo with tests
       (incl. the reference points in §6).
 - [ ] **M2 Fetcher** – live `npm run fetch` writes a valid `forecast.json`; fixture-based
       tests; failure leaves the old file. Compare two tide extremes with a published
