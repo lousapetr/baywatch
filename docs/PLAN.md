@@ -331,7 +331,7 @@ how the score works, link to AEMET coastal warnings, app version/build date.
 
 ## 10. Milestones
 
-- [ ] **M0 Scaffold** – package.json, tsconfig (strict), Vite + Preact, vitest, eslint,
+- [x] **M0 Scaffold** – package.json, tsconfig (strict), Vite + Preact, vitest, eslint,
       npm scripts of §3, placeholder page. `npm run check` and `npm run build`
       produce `dist/site/index.html` and `dist/fetcher/fetch.mjs`.
 - [ ] **M1 Shared logic** – types, spots, tide, score, windows, format, geo with tests
