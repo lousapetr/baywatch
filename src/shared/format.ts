@@ -135,7 +135,12 @@ const WMO: Record<number, WeatherInfo> = {
   99: { label: 'silná bouřka s kroupami', emoji: '⛈️' },
 };
 
-/** Czech label and emoji for a WMO weather code. */
-export function weatherInfo(code: number): WeatherInfo {
-  return WMO[code] ?? { label: 'neznámé', emoji: '❓' };
+/** Sun-showing emoji and their night replacements. */
+const NIGHT_EMOJI: Record<string, string> = { '☀️': '🌙', '🌤️': '🌙', '⛅': '☁️', '🌦️': '🌧️' };
+
+/** Czech label and emoji for a WMO weather code; at night without a sun. */
+export function weatherInfo(code: number, isDay = true): WeatherInfo {
+  const w = WMO[code] ?? { label: 'neznámé', emoji: '❓' };
+  const night = isDay ? undefined : NIGHT_EMOJI[w.emoji];
+  return night ? { ...w, emoji: night } : w;
 }

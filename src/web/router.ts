@@ -27,6 +27,12 @@ export function href(path: RoutePath, params: Record<string, string> = {}): stri
   return `#${path}${qs ? `?${qs}` : ''}`;
 }
 
+/** Requested date if it is in the forecast, else today, else the first day. */
+export function selectDay(requested: string | undefined, dates: string[], today: string): string {
+  if (requested && dates.includes(requested)) return requested;
+  return dates.includes(today) ? today : (dates[0] ?? today);
+}
+
 /** Current route, re-read on `hashchange`; an unknown hash is rewritten to `#/`. */
 export function useRoute(): Route {
   const [route, setRoute] = useState(() => parseHash(location.hash));

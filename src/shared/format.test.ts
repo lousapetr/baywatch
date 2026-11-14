@@ -89,5 +89,7 @@ describe('format', () => {
     expect(weatherInfo(95).label).toBe('bouřka');
     expect(weatherInfo(63).emoji).toBe('🌧️');
     expect(weatherInfo(1234).label).toBe('neznámé');
+    expect(weatherInfo(0, false)).toEqual({ label: 'jasno', emoji: '🌙' });
+    expect(weatherInfo(63, false).emoji).toBe('🌧️');
   });
 });

@@ -1,10 +1,10 @@
-import { useEffect, useRef } from 'preact/hooks';
 import type { TideExtreme } from '../../shared/types.ts';
 import { formatDayLabel, formatDuration, formatNumber, formatTime, formatWeekdayDate, localDate, relativeDay } from '../../shared/format.ts';
 import { tideStateAt } from '../../shared/tide.ts';
 import { RANGE_LABELS, classifyRange } from '../../shared/tideRange.ts';
 import { useApp } from '../data.ts';
-import { href } from '../router.ts';
+import { selectDay } from '../router.ts';
+import { DaySwitch } from '../components/DaySwitch.tsx';
 import { TideChart } from '../components/TideChart.tsx';
 import { chartWindow, extremesIn, groupByDate } from '../tideChart.ts';
 
@@ -13,23 +13,15 @@ const arrow = (type: TideExtreme['type']) => (type === 'high' ? '↑' : '↓');
 
 export function Tides() {
   const { forecast, route, now } = useApp();
-  const switchRef = useRef<HTMLElement>(null);
-  const reqDay = route.params['d'];
-  // Centres the selected day chip in the horizontally scrolling switch.
-  useEffect(() => {
-    const nav = switchRef.current;
-    const chip = nav?.querySelector('[aria-current="true"]');
-    if (!nav || !chip) return;
-    const n = nav.getBoundingClientRect();
-    const c = chip.getBoundingClientRect();
-    nav.scrollLeft += c.left - n.left - (n.width - c.width) / 2;
-  }, [reqDay]);
   if (!forecast) return null;
   const { tide, days } = forecast;
   const off = tide.datumOffsetM;
   const today = localDate(now);
-  const dates = days.map((d) => d.date);
-  const selected = reqDay && dates.includes(reqDay) ? reqDay : dates.includes(today) ? today : (dates[0] ?? today);
+  const selected = selectDay(
+    route.params['d'],
+    days.map((d) => d.date),
+    today,
+  );
 
   const state = tideStateAt(tide, tide.extremes, now);
   const next = state.next;
@@ -64,18 +56,7 @@ export function Tides() {
       </section>
 
       <section class="card" aria-label="Graf přílivu">
-        <nav class="day-switch" aria-label="Den grafu" ref={switchRef}>
-          {days.map((d) => (
-            <a
-              key={d.date}
-              class="day-chip"
-              href={href('/priliv', { d: d.date })}
-              aria-current={d.date === selected ? 'true' : undefined}
-            >
-              {formatDayLabel(d.sunrise, now)}
-            </a>
-          ))}
-        </nav>
+        <DaySwitch path="/priliv" days={days} selected={selected} now={now} label="Den grafu" />
         <TideChart tide={tide} days={days} t0={t0} t1={t1} now={now} label={chartLabel} />
         <p class="muted small">Výška nad přibližným mořským datem (jako v tabulkách přílivu), stínované je noc.</p>
       </section>

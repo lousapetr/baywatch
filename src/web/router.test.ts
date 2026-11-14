@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { href, parseHash } from './router.ts';
+import { href, parseHash, selectDay } from './router.ts';
 
 describe('parseHash', () => {
   it('parses known paths', () => {
@@ -20,5 +20,14 @@ describe('href', () => {
   it('builds links with and without params', () => {
     expect(href('/vlny')).toBe('#/vlny');
     expect(href('/vlny', { d: '2026-11-15' })).toBe('#/vlny?d=2026-11-15');
+  });
+});
+
+describe('selectDay', () => {
+  const dates = ['2026-11-14', '2026-11-15'];
+  it('falls back to today, then the first day', () => {
+    expect(selectDay('2026-11-15', dates, '2026-11-14')).toBe('2026-11-15');
+    expect(selectDay('bad', dates, '2026-11-14')).toBe('2026-11-14');
+    expect(selectDay(undefined, dates, '2026-12-01')).toBe('2026-11-14');
   });
 });

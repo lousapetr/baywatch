@@ -1,3 +1,4 @@
+import { formatNumber } from './format.ts';
 import { angleDiff } from './geo.ts';
 
 /** Energy flux per metre of wave crest, deep-water approximation, kW/m. */
@@ -77,6 +78,21 @@ const LABELS = ['klid', 'slabé', 'ujde', 'pěkné', 'velké', 'bouře – výji
 
 /** Czech label for a (possibly fractional) star value, rounded to an integer. */
 export function starLabel(stars: number): string {
-  const i = Math.min(5, Math.max(0, Math.round(stars)));
-  return LABELS[i] as string;
+  return LABELS[wholeStars(stars)] as string;
+}
+
+/** Whole stars 0–5 for a score (rounded, clamped). */
+export function wholeStars(score: number): number {
+  return Math.min(5, Math.max(0, Math.round(score)));
+}
+
+/** `★★★☆☆` for a score (rounded). */
+export function starsGlyph(score: number): string {
+  const n = wholeStars(score);
+  return '★'.repeat(n) + '☆'.repeat(5 - n);
+}
+
+/** Text equivalent of a score, e.g. `2,3 z 5, ujde`. */
+export function scoreText(score: number): string {
+  return `${formatNumber(score)} z 5, ${starLabel(score)}`;
 }

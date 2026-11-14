@@ -418,3 +418,159 @@ a {
 .footnote {
   margin: 12px 0 0;
 }
+
+.w-headline {
+  margin: 8px 0 2px;
+  font-size: 1.0625rem;
+  font-weight: 700;
+}
+
+.safety {
+  margin: 8px 0;
+  padding: 8px 12px;
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border-radius: 10px;
+  font-weight: 600;
+}
+
+.wc-h {
+  fill: var(--accent);
+}
+
+.wc-p {
+  fill: var(--low);
+}
+
+.wc-period {
+  fill: none;
+  stroke: var(--low);
+  stroke-width: 2;
+  stroke-dasharray: 5 3;
+  stroke-linejoin: round;
+}
+
+.sc-bar {
+  fill: var(--accent);
+  fill-opacity: 0.4;
+}
+
+.sc-bar.in {
+  fill-opacity: 1;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 16px;
+  margin: 0 0 12px;
+}
+
+.legend > span {
+  white-space: nowrap;
+}
+
+.lg {
+  display: inline-block;
+  width: 18px;
+  height: 0;
+  border-top: 3px solid var(--accent);
+}
+
+.lg-p {
+  border-top: 2px dashed var(--low);
+}
+
+.arrow {
+  fill: currentColor;
+  vertical-align: -3px;
+}
+
+.wrows {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wrow {
+  display: grid;
+  grid-template-columns: 44px 1fr;
+  gap: 2px 8px;
+  padding: 8px 6px;
+  border-top: 1px solid var(--border);
+  border-left: 4px solid transparent;
+  font-variant-numeric: tabular-nums;
+}
+
+.wrow.night {
+  opacity: 0.6;
+  background: var(--night);
+}
+
+.wrow.best {
+  border-left-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+
+.w-time {
+  grid-row: 1 / span 2;
+  font-weight: 700;
+}
+
+.w-main,
+.w-sub {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+}
+
+.w-sub {
+  column-gap: 6px;
+  font-size: 0.8125rem;
+  color: var(--muted);
+}
+
+.w-stars {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.8125rem;
+}
+
+.w-bar {
+  display: inline-block;
+  width: 44px;
+  height: 8px;
+  background: var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.w-bar span {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+}
+
+.w-tide.up {
+  color: var(--high);
+}
+
+.w-tide.down {
+  color: var(--low);
+}
+
+.btn-ghost {
+  width: 100%;
+  min-height: 44px;
+  margin-top: 8px;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent);
+  background: none;
+  border: 1px solid var(--control-border);
+  border-radius: 10px;
+  cursor: pointer;
+}

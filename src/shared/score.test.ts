@@ -4,7 +4,9 @@ import {
   combinedPower,
   dirFactor,
   scoreHour,
+  scoreText,
   starLabel,
+  starsGlyph,
   starsFromPower,
   tideFactor,
   wavePower,
@@ -113,5 +115,13 @@ describe('starLabel', () => {
     expect(starLabel(4)).toBe('velké');
     expect(starLabel(5)).toBe('bouře – výjimečné');
     expect(starLabel(9)).toBe('bouře – výjimečné');
+  });
+});
+
+describe('star text', () => {
+  it('renders glyphs and text equivalents', () => {
+    expect(starsGlyph(2.6)).toBe('★★★☆☆');
+    expect(starsGlyph(-1)).toBe('☆☆☆☆☆');
+    expect(scoreText(2.3)).toBe('2,3 z 5, ujde');
   });
 });
