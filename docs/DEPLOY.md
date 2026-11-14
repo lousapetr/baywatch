@@ -1,8 +1,9 @@
 # Návod na publikaci
 
-Cíl: `https://baywatch.lope.me.uk` (subdoménu lze zvolit jinou) na Oracle VM,
-kde už běží carstats. Baywatch běží vedle něj jako samostatný Docker Compose
-projekt s vlastním Cloudflare tunelem – carstats se vůbec nedotkneme.
+Cíl: `https://baywatch.example.com` (nahraď vlastní doménou) na malé VM
+(např. Oracle Cloud Free Tier, Oracle Linux, uživatel `opc`). Baywatch běží jako
+samostatný Docker Compose projekt s vlastním Cloudflare tunelem, takže nekoliduje
+s ostatními službami na serveru.
 
 ```
 notebook ──(scripts/deploy.sh: build + rsync)──► VM ~/baywatch/
@@ -20,29 +21,33 @@ Na VM se nic nebuilduje (šetří RAM), neotevírá se žádný port a není pot
 
 ## Předpoklady
 
-- SSH přístup na VM (`ssh opc@<ip>`), na VM běží Docker s compose pluginem (díky carstats ano).
-- Doména `lope.me.uk` je spravovaná v Cloudflare. **Neověřeno** – předpokládám
-  to podle toho, že carstats používá Cloudflare Tunnel. Pokud ne, viz „Bez Cloudflare“ dole.
+- SSH přístup na VM (`ssh opc@<ip>`), na VM běží Docker s compose pluginem.
+- Doména je spravovaná v Cloudflare (DNS u Cloudflare). Pokud ne, viz „Bez Cloudflare“ dole.
 - Na notebooku Node 22, `rsync`, `ssh`. Na VM `rsync` (`sudo dnf install -y rsync`, pokud chybí).
 - Projekt je implementovaný a `npm run build` vytváří `dist/site/` a `dist/fetcher/fetch.mjs`.
 
 ## 1. Cloudflare tunel (jednorázově, v prohlížeči)
 
-1. Cloudflare dashboard → **Zero Trust** → **Networks** → **Tunnels** → **Create a tunnel**.
-2. Typ **Cloudflared**, název `baywatch`, uložit.
-3. Na stránce s instalačními příkazy nic nespouštěj, jen si zkopíruj **token**
-   (dlouhý řetězec za `--token`).
-4. Záložka **Public Hostname** → **Add a public hostname**:
-   - Subdomain: `baywatch`, Domain: `lope.me.uk`, Path: prázdné
-   - Service: Type `HTTP`, URL `web:80`
-5. Uložit. Cloudflare sám vytvoří DNS záznam (CNAME na tunel).
+Podle [Cloudflare Tunnel – Get started](https://developers.cloudflare.com/tunnel/get-started/).
+Popisky v dashboardu se občas mění; řiď se tím, co vidíš.
 
-> Chceš web přímo na `lope.me.uk` místo subdomény? Nech Subdomain prázdné.
-> Jde to jen tehdy, pokud na kořeni domény už neběží něco jiného.
+**Vytvoření tunelu**
 
-> Alternativa bez druhého tunelu: přidat public hostname do tunelu carstats a
-> napojit `web` na jeho Docker síť. Ušetří ~30 MB RAM, ale sváže oba projekty
-> (např. `docker compose down` u carstats pak selže na síti). Nedoporučuji.
+1. Cloudflare dashboard → **Networking** → **Tunnels** → **Create Tunnel**.
+2. Název `baywatch` → **Create Tunnel**.
+3. V **Setup Environment** / **Install and Run** nic nespouštěj, jen si z příkazu
+   zkopíruj **token** (dlouhý řetězec za `--token` / `service install`).
+   Spustí ho kontejner `cloudflared` z `docker-compose.yml`.
+4. Pokračuj (**Continue**). Stav `Healthy` se ukáže až po prvním nasazení (krok 3).
+
+**Publikace aplikace**
+
+1. **Networking** → **Tunnels** → tunel `baywatch`.
+2. **Routes** → **Add route** → **Published application**.
+3. **Hostname**: subdoména `baywatch`, doména ze seznamu.
+4. **Service URL**: `http://web:80` (název služby v compose, ne `localhost` –
+   `cloudflared` běží ve vlastním kontejneru).
+5. **Add route**. Cloudflare sám vytvoří DNS záznam (CNAME na tunel).
 
 ## 2. Příprava serveru (jednorázově)
 
@@ -106,7 +111,7 @@ dědí hlavičky z nadřazené úrovně jen tehdy, když `location` žádnou nem
 crontab -e
 ```
 
-a přidej řádek (vedle zálohy carstats):
+a přidej řádek:
 
 ```
 7 * * * * cd /home/opc/baywatch && /usr/bin/docker compose run --rm fetcher >> fetch.log 2>&1
@@ -130,9 +135,6 @@ počítá nejvýš jednou. Po úspěchu se počítadlo vynuluje. Když je
 `status.json` je veřejný jako `forecast.json`; nginx ho posílá s
 `Cache-Control: no-cache`, ostatní `/data/` s `max-age=300`.
 
-Carstats na 1GB stroji má zálohu ve 3:00 a updaty ve 4:00 –
-krátký běh fetcheru jim nevadí.
-
 ## 5. Ověření
 
 ```bash
@@ -142,10 +144,10 @@ ls -la data/                      # forecast.json s čerstvým časem
 tail fetch.log                    # po první hodině
 
 # odkudkoli
-curl -I https://baywatch.lope.me.uk/
-curl -s https://baywatch.lope.me.uk/data/status.json       # consecutiveFailures: 0 po úspěšném běhu
-curl -s https://baywatch.lope.me.uk/data/forecast.json | head -c 200
-curl -I https://baywatch.lope.me.uk/manifest.webmanifest   # content-type: application/manifest+json
+curl -I https://baywatch.example.com/
+curl -s https://baywatch.example.com/data/status.json       # consecutiveFailures: 0 po úspěšném běhu
+curl -s https://baywatch.example.com/data/forecast.json | head -c 200
+curl -I https://baywatch.example.com/manifest.webmanifest   # content-type: application/manifest+json
 ```
 
 Jednorázově na serveru před prvním cronem – fetcher spoléhá na busybox `timeout`:
@@ -171,7 +173,7 @@ Aplikace se pak otevírá bez adresního řádku a bez signálu ukáže posledn�
   a novou verzi uvidíš po zavření a opětovném otevření aplikace (někdy až napodruhé).
   Data (`forecast.json`) se berou přes síť (`NetworkFirst`, 5 s) a offline se použije poslední uložená kopie.
 - **Logy**: `docker compose logs --tail 50 web`, `docker compose logs --tail 50 cloudflared`, `tail fetch.log`.
-- **Aktualizace obrazů** (cca měsíčně, spolu s údržbou carstats):
+- **Aktualizace obrazů** (cca měsíčně):
   `cd ~/baywatch && docker compose pull && docker compose --profile job pull && docker compose up -d && docker image prune -f`
 - **Rotace logu**: `fetch.log` roste ~1 řádek za hodinu; jednou za rok smaž, nebo nic.
 - **Po restartu VM** naběhnou `web` i `cloudflared` samy (`restart: unless-stopped`),
@@ -197,15 +199,5 @@ Aplikace se pak otevírá bez adresního řádku a bez signálu ukáže posledn�
 
 Pak je potřeba klasická cesta: A záznam domény na veřejnou IP VM, otevřít porty
 80/443 jak v Oracle Security Listu, tak ve firewallu VM (`firewall-cmd`), a
-místo `cloudflared` pustit reverse proxy s Let's Encrypt (např. Caddy). To není
-v repu připravené – řekni si a doplním.
-
-## Neověřeno
-
-- Busybox `timeout -s KILL 120 …` v `node:22-alpine` se ověřuje příkazem v kroku 5
-  (logiku jsem ověřil jen s GNU `timeout`).
-- `docker compose config` je validní (ověřeno), ale nginx ani compose jsem v prostředí bez dockeru
-  nespustil – `scripts/smoke.sh` je určený ke spuštění na notebooku.
-- `deploy/` a `scripts/deploy.sh` jsem psal bez možnosti je spustit proti serveru –
-  první nasazení ber jako test.
-- Uživatel `opc`, uid 1000 a Oracle Linux předpokládám podle README carstats.
+místo `cloudflared` pustit reverse proxy s Let's Encrypt (např. Caddy). To v repu
+není připravené.
