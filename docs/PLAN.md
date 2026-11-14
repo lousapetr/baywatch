@@ -44,10 +44,16 @@ data layer shared.
   precipitation, precipitation_probability, weather_code, cloud_cover,
   wind_speed_10m, wind_direction_10m, wind_gusts_10m` and daily `sunrise,sunset`.
 - Licence CC BY 4.0, attribution with link required. Free tier is non-commercial,
-  10 000 calls/day – we make ~50/day.
+  10 000 calls/day – we make a few hundred (hourly run, each requested
+  location presumably counts as one call).
 
 Not verified – check when you get there:
 - Spot coordinates and coast orientations in §5 (estimates).
+- Which spots share a marine grid cell (§5) – the fetcher derives it from the
+  snapped coordinates in the response, nothing is hard-coded.
+- Multi-location requests (comma-separated `latitude`/`longitude`) return an
+  array with one element per location in request order (per the docs), and how
+  they count against the daily limit.
 - Whether `timeformat=unixtime` applies to `minutely_15` and daily sunrise/sunset
   (expected yes).
 - Score thresholds in §6 are a first calibration, to be tuned from observation.
@@ -95,8 +101,8 @@ delete it in the build step.
 
 ## 4. Data contract – `forecast.json`
 
-Define in `src/shared/types.ts`. All times unix seconds UTC. Arrays in `hourly`
-are parallel to `hourly.time`. Round numbers on output (heights 2 dp, others 0–1 dp)
+Define in `src/shared/types.ts`. All times unix seconds UTC. `time` is shared by
+all cells; arrays in each cell's `hourly` are parallel to it. Round numbers on output (heights 2 dp, others 0–1 dp)
 to keep the file small.
 
 ```ts
@@ -105,8 +111,25 @@ interface Forecast {
   generatedAt: number;
   timezone: 'Europe/Madrid';
   attribution: { name: string; url: string }[];
+  time: number[];                   // 8 days × 24, hourly
+  isDay: boolean[];                 // between sunrise and sunset, parallel to time
+  cells: CellForecast[];            // one per marine grid cell used by the spots, see §5
+  tide: {                           // from the default spot's cell, shared by all spots
+    datumOffsetM: number;           // added to MSL heights for display (≈ chart datum)
+    step: 900;
+    start: number;
+    levelMsl: number[];             // 15-min series
+    extremes: { time: number; levelMsl: number; type: 'high' | 'low' }[];
+    days: { date: string; rangeM: number }[];   // max daily range → spring/neap hint
+  };
+  days: { date: string; sunrise: number; sunset: number }[];   // date = YYYY-MM-DD in Europe/Madrid
+  spots: SpotForecast[];
+}
+
+interface CellForecast {
+  id: string;                       // `${lat},${lon}` of the snapped marine grid point
+  lat: number; lon: number;
   hourly: {
-    time: number[];                 // 8 days × 24
     waveHeight: number[];           // m, total significant height
     wavePeriod: number[];           // s
     waveDir: number[];              // ° coming from
@@ -124,25 +147,15 @@ interface Forecast {
     windSpeed: number[];            // km/h
     windGust: number[];
     windDir: number[];              // ° coming from
-    isDay: boolean[];               // between sunrise and sunset
   };
-  tide: {
-    datumOffsetM: number;           // added to MSL heights for display (≈ chart datum)
-    step: 900;
-    start: number;
-    levelMsl: number[];             // 15-min series
-    extremes: { time: number; levelMsl: number; type: 'high' | 'low' }[];
-    days: { date: string; rangeM: number }[];   // max daily range → spring/neap hint
-  };
-  days: { date: string; sunrise: number; sunset: number }[];   // date = YYYY-MM-DD in Europe/Madrid
-  spots: SpotForecast[];
 }
 
 interface SpotForecast {
   id: string; name: string; lat: number; lon: number;
+  cell: string;                     // CellForecast.id supplying this spot's hourly data
   facingDeg: number;                // seaward normal of the coast
   note: string;                     // Czech one-liner: what to see, where to stand
-  score: number[];                  // 0–5 with one decimal, parallel to hourly.time
+  score: number[];                  // 0–5 with one decimal, parallel to time
   windows: BestWindow[];            // best daylight window per day
 }
 
@@ -158,8 +171,12 @@ interface BestWindow {
 
 ## 5. Spots (`src/shared/spots.ts`)
 
-One marine request and one weather request serve all spots (they share the
-model grid cell); spots differ only in `facingDeg` and `tideWeight`.
+The spots span ~37 km of coast, more than one ~8 km marine grid cell. Spots
+are grouped by the marine grid point they snap to; each group (cell) is
+fetched once and its spots share that hourly data, differing only in
+`facingDeg` and `tideWeight`. Tide and sunrise/sunset are taken from the
+default spot and shared by all spots (differences along this coast are assumed
+to be within the stated ±30 min – unverified).
 Coordinates and orientations are **estimates – verify on a map** and adjust.
 
 | id | name | lat, lon | facingDeg | tideWeight | note |
@@ -172,7 +189,9 @@ Coordinates and orientations are **estimates – verify on a map** and adjust.
 | `canallave` | Playa de Canallave | 43.450, −3.962 | 330 | 0.3 | exposed surf beach by the Liencres dunes |
 | `punta-afuera` | Punta del Torco de Afuera (Suances) | 43.442, −4.043 | 0 | 0.3 | headland with the Suances lighthouse at the river mouth |
 
-Fetch point: marine `43.50, −3.80`; weather `43.49, −3.79`.
+Fetch points: marine at every spot's own coordinates (the API snaps them to
+grid points, which define the groups); weather at the coordinates of the
+first spot of each group. `spots.ts` holds no cell assignment.
 
 ## 6. Domain logic (`src/shared`, pure + tested)
 
@@ -195,7 +214,7 @@ P(H, T) = 0.5 · H² · T                      [kW/m]
 power   = max( P(swellHeight, swellPeriod), P(waveHeight, wavePeriod) )
 ```
 
-Per spot and hour:
+Per spot and hour, using the hourly data of the spot's cell:
 
 ```
 Δ       = smallest angle between swellDir and spot.facingDeg      (0–180°)
@@ -230,17 +249,24 @@ UI then says it is not worth going). Comfort is reported, never mixed into the s
 
 ## 7. Fetcher (`src/fetcher`)
 
-- Requests (both with `timezone=UTC&timeformat=unixtime&forecast_days=8`):
-  - marine: the hourly variables of §2 + `minutely_15=sea_level_height_msl`
-  - forecast: hourly variables of §2 + `daily=sunrise,sunset` + `wind_speed_unit=kmh`
+- Requests (both with `timezone=UTC&timeformat=unixtime&forecast_days=8`),
+  each a single multi-location call:
+  1. marine for all spots: the hourly variables of §2 + `minutely_15=sea_level_height_msl`.
+     Group spots by the returned `latitude,longitude` (rounded to 4 dp) → cells;
+     keep one response per cell.
+  2. forecast for the first spot of each cell: hourly variables of §2 +
+     `daily=sunrise,sunset` + `wind_speed_unit=kmh`.
+- Fall back to one request per location if a multi-location call fails or
+  returns a different number of elements than requested.
 - 20 s timeout, 3 retries with backoff. Validate shape (arrays present, equal
   lengths, no nulls in required fields within the first 7 days) before use.
 - Build `Forecast`, write `OUT_DIR/forecast.json` atomically (write `.tmp`, rename).
 - **On any failure exit non-zero and leave the previous file untouched.**
-- Log one line to stdout per run (timestamp, ok/error, bytes).
+- Log one line to stdout per run (timestamp, ok/error, bytes, cells with their spots).
 - No runtime dependencies; a single bundled `fetch.mjs`.
 - Keep recorded API responses in `src/fetcher/fixtures/` and test
-  `build.ts` against them (no network in tests).
+  `build.ts` against them (no network in tests); include a fixture with at
+  least two cells.
 
 ## 8. Frontend (`src/web`)
 
@@ -249,7 +275,9 @@ UI then says it is not worth going). Comfort is reported, never mixed into the s
 - Bottom tab bar (Přehled · Příliv · Vlny · O aplikaci), header with spot selector
   (persisted in `localStorage`, default `san-juan-canal`).
 - `data.ts`: fetch `./data/forecast.json` on load, on tab focus and every 15 min.
-  Expose `{ forecast, status }`. Show "data z 14:05" in the header; a warning
+  Expose `{ forecast, status }` and a helper returning the selected spot's
+  cell (`cells.find(c => c.id === spot.cell)`); pages read wave, wind and
+  weather values through it. Show "data z 14:05" in the header; a warning
   chip when `generatedAt` is older than 3 h; a friendly full-page state when
   there is no data at all. A ticking `now` signal (1 min) drives "current" values.
 - Light/dark via CSS custom properties; sea-themed but restrained; system font stack.
