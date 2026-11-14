@@ -382,7 +382,7 @@ how the score works, link to AEMET coastal warnings, app version/build date.
       tests; failure leaves the old file. Compare two tide extremes with a published
       Santander tide table and note the difference in the PR/commit message.
 - [x] **M3 Shell** – routing, tab bar, spot selector, data loading, stale/empty states, theming.
-- [ ] **M4 Příliv** page.
+- [x] **M4 Příliv** page.
 - [ ] **M5 Vlny** page.
 - [ ] **M6 Přehled** page.
 - [ ] **M7 PWA** – manifest, icons, service worker, offline check.

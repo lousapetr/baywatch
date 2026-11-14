@@ -1,9 +1,9 @@
 import { SPOTS } from '../../shared/spots.ts';
 import { formatTime } from '../../shared/format.ts';
-import { isStale, useApp } from '../data.ts';
+import { isStale, shouldAlertFailures, useApp } from '../data.ts';
 
 export function Header() {
-  const { forecast, spot, setSpotId, now, status } = useApp();
+  const { forecast, spot, setSpotId, now, status, fetchStatus } = useApp();
   const stale = forecast ? isStale(forecast.generatedAt, now) : false;
   return (
     <header class="header">
@@ -28,6 +28,11 @@ export function Header() {
         )}
         {forecast && status === 'error' && <span class="chip">offline</span>}
       </div>
+      {shouldAlertFailures(fetchStatus) && (
+        <p class="alert-warn" role="status">
+          Stahování předpovědi opakovaně selhává ({fetchStatus?.consecutiveFailures}× po sobě) – data mohou být zastaralá.
+        </p>
+      )}
     </header>
   );
 }

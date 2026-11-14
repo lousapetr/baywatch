@@ -1,7 +1,7 @@
 import { createContext } from 'preact';
 import { useContext, useEffect, useState } from 'preact/hooks';
 import type { Route } from './router.ts';
-import type { CellForecast, Forecast } from '../shared/types.ts';
+import { FETCH_FAILURE_ALERT, type CellForecast, type FetchStatus, type Forecast } from '../shared/types.ts';
 import { DEFAULT_SPOT_ID, SPOTS, type Spot } from '../shared/spots.ts';
 
 export type Status = 'loading' | 'ok' | 'error';
@@ -53,8 +53,31 @@ async function fetchForecast(): Promise<Forecast> {
   return json;
 }
 
+/** True when the fetcher reports enough consecutive failures to warn the user. */
+export function shouldAlertFailures(s: FetchStatus | null): boolean {
+  return !!s && s.consecutiveFailures >= FETCH_FAILURE_ALERT;
+}
+
+/** Valid `FetchStatus` or null for anything else. */
+export function parseFetchStatus(x: unknown): FetchStatus | null {
+  const s = x as FetchStatus | null;
+  return !!s && typeof s === 'object' && s.version === 1 && Number.isFinite(s.consecutiveFailures) ? s : null;
+}
+
+/** Fetcher status; any problem (404, invalid JSON, wrong shape) means "no status" and no alert. */
+async function fetchFetchStatus(): Promise<FetchStatus | null> {
+  try {
+    const res = await fetch('./data/status.json', { cache: 'no-cache' });
+    return res.ok ? parseFetchStatus(await res.json()) : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface AppState {
   forecast: Forecast | null;
+  /** Latest fetcher status, null when unavailable. */
+  fetchStatus: FetchStatus | null;
   status: Status;
   /** Unix seconds, ticks every minute. */
   now: number;
@@ -82,6 +105,7 @@ const nowS = () => Math.floor(Date.now() / 1000);
 /** Loads and refreshes the forecast; keeps the last good data on errors. */
 export function useAppState(): AppState {
   const [forecast, setForecast] = useState<Forecast | null>(null);
+  const [fetchStatus, setFetchStatus] = useState<FetchStatus | null>(null);
   const [status, setStatus] = useState<Status>('loading');
   const [now, setNow] = useState(nowS);
   const [spotId, setSpotIdState] = useState(loadSpotId);
@@ -94,6 +118,9 @@ export function useAppState(): AppState {
       // Only the latest request may update state.
       const id = ++seq;
       const current = () => alive && id === seq;
+      void fetchFetchStatus().then((st) => {
+        if (current()) setFetchStatus(st);
+      });
       fetchForecast().then(
         (f) => {
           if (!current()) return;
@@ -129,6 +156,7 @@ export function useAppState(): AppState {
   const spot = findSpot(spotId);
   return {
     forecast,
+    fetchStatus,
     status,
     now,
     spot,
