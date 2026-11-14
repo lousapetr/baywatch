@@ -39,7 +39,7 @@ data layer shared.
   Compared with a published Santander tide table: range matches (~2.6 m that day),
   extremes were **0–50 min early**. Treat times as ±30 min and say so in the UI.
 - Published Spanish tide tables use chart datum; offset to MSL is roughly +2.5 m
-  (estimated from one day, unverified).
+  (estimated from one day; a second comparison on 2026-11-14/15 agrees to ~0.1 m).
 - `https://api.open-meteo.com/v1/forecast` works with hourly `temperature_2m,
   precipitation, precipitation_probability, weather_code, cloud_cover,
   wind_speed_10m, wind_direction_10m, wind_gusts_10m` and daily `sunrise,sunset`.
@@ -47,15 +47,34 @@ data layer shared.
   10 000 calls/day – we make a few hundred (hourly run, each requested
   location presumably counts as one call).
 
+Verified 2026-11-14 (M2):
+- Multi-location requests (comma-separated `latitude`/`longitude`) return a JSON
+  array, one element per location **in request order**, duplicates included
+  (a single location returns a bare object). Per-call cost is not observable
+  (no rate-limit headers); assumed one call per location.
+- `timeformat=unixtime` applies to `hourly`, `minutely_15` and `daily`
+  (`sunrise`, `sunset`, `time`). With `timezone=UTC` the first hour is today
+  00:00 UTC; 8 days = 192 hourly and 768 15-min steps.
+- `swell_wave_peak_period` is null from hour ~79 on (113 of 192 values), not only
+  at the very end: the fetcher falls back to `swell_wave_period` per hour.
+  All other required marine/weather fields are non-null for all 192 hours.
+- Marine grid is ~0.083° and **land-masked**: requests snap to the nearest sea
+  cell, which can be ~10 km away. The 7 spots fall into 5 cells:
+  `43.5417,-3.875` san-juan-canal; `43.5417,-3.9583` costa-quebrada +
+  canallave; `43.5417,-3.7917` cabo-mayor + sardinero; `43.5417,-3.625`
+  cabo-ajo; `43.4583,-4.125` punta-afuera. Canallave (43.450) snaps ~10 km
+  north, punta-afuera (-4.043) ~7 km west – open questions for the spot table.
+- Published tide table comparison (tide-forecast.com, Santander, CET), 14–15 Nov:
+  our extremes are 16–29 min early (mean ~25 min) and 0.00–0.15 m lower than
+  the table (table = chart datum; with `datumOffsetM` 2.5 the offset is
+  consistent to ~0.1 m). Consistent with the ±30 min caveat.
+- Spot-to-spot differences in sunrise/sunset across the 5 weather points are < 2 min.
+- Sandbox note: Node's `fetch` ignores `HTTPS_PROXY` unless
+  `NODE_USE_ENV_PROXY=1` (only relevant behind a proxy).
+
 Not verified – check when you get there:
 - Spot coordinates and coast orientations in §5 (estimates).
-- Which spots share a marine grid cell (§5) – the fetcher derives it from the
-  snapped coordinates in the response, nothing is hard-coded.
-- Multi-location requests (comma-separated `latitude`/`longitude`) return an
-  array with one element per location in request order (per the docs), and how
-  they count against the daily limit.
-- Whether `timeformat=unixtime` applies to `minutely_15` and daily sunrise/sunset
-  (expected yes).
+- Tide differences between spots along the coast (assumed within ±30 min).
 - Score thresholds in §6 are a first calibration, to be tuned from observation.
 
 ## 3. Architecture
@@ -178,6 +197,9 @@ fetched once and its spots share that hourly data, differing only in
 default spot and shared by all spots (differences along this coast are assumed
 to be within the stated ±30 min – unverified).
 Coordinates and orientations are **estimates – verify on a map** and adjust.
+The marine grid is land-masked and snaps to the nearest sea cell: `canallave`
+uses the cell ~10 km N (shared with `costa-quebrada`), `punta-afuera` the cell
+~7 km WSW. No closer sea cells exist (checked 2026-11-14); kept as is.
 
 | id | name | lat, lon | facingDeg | tideWeight | note |
 | --- | --- | --- | --- | --- | --- |
@@ -336,7 +358,7 @@ how the score works, link to AEMET coastal warnings, app version/build date.
       produce `dist/site/index.html` and `dist/fetcher/fetch.mjs`.
 - [x] **M1 Shared logic** – types, spots, tide, score, windows, format, geo with tests
       (incl. the reference points in §6).
-- [ ] **M2 Fetcher** – live `npm run fetch` writes a valid `forecast.json`; fixture-based
+- [x] **M2 Fetcher** – live `npm run fetch` writes a valid `forecast.json`; fixture-based
       tests; failure leaves the old file. Compare two tide extremes with a published
       Santander tide table and note the difference in the PR/commit message.
 - [ ] **M3 Shell** – routing, tab bar, spot selector, data loading, stale/empty states, theming.
