@@ -64,10 +64,18 @@ export function parseFetchStatus(x: unknown): FetchStatus | null {
   return !!s && typeof s === 'object' && s.version === 1 && Number.isFinite(s.consecutiveFailures) ? s : null;
 }
 
-/** Fetcher status; any problem (404, invalid JSON, wrong shape) means "no status" and no alert. */
-async function fetchFetchStatus(): Promise<FetchStatus | null> {
+/**
+ * Fetcher status; a server answer that is not a valid status (404, invalid JSON, wrong shape) means
+ * "no status" (null). Undefined when the server is unreachable, so the last known status stays.
+ */
+async function fetchFetchStatus(): Promise<FetchStatus | null | undefined> {
+  let res: Response;
   try {
-    const res = await fetch('./data/status.json', { cache: 'no-cache' });
+    res = await fetch('./data/status.json', { cache: 'no-cache' });
+  } catch {
+    return undefined;
+  }
+  try {
     return res.ok ? parseFetchStatus(await res.json()) : null;
   } catch {
     return null;
@@ -119,7 +127,7 @@ export function useAppState(): AppState {
       const id = ++seq;
       const current = () => alive && id === seq;
       void fetchFetchStatus().then((st) => {
-        if (current()) setFetchStatus(st);
+        if (current() && st !== undefined) setFetchStatus(st);
       });
       fetchForecast().then(
         (f) => {
@@ -141,7 +149,13 @@ export function useAppState(): AppState {
       }
     };
     document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('online', load);
+    // Refetch once a service worker takes control so the forecast lands in its cache.
+    const sw = 'serviceWorker' in navigator ? navigator.serviceWorker : undefined;
+    sw?.addEventListener('controllerchange', load);
     return () => {
+      window.removeEventListener('online', load);
+      sw?.removeEventListener('controllerchange', load);
       alive = false;
       clearInterval(timer);
       document.removeEventListener('visibilitychange', onVisible);

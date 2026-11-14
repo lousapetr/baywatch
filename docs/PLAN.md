@@ -403,7 +403,7 @@ how the score works, link to AEMET coastal warnings, app version/build date.
 - [x] **M6 Přehled** page.
 - [x] **M6b Feedback** – Přehled with all spots, header date, Vlny dashboard +
       week chart, Počasí tab, O aplikaci moved out of the tab bar.
-- [ ] **M7 PWA** – manifest, icons, service worker, offline check.
+- [x] **M7 PWA** – manifest, icons, service worker, offline check.
 - [ ] **M8 Release** – `docker compose -f deploy/docker-compose.yml config` validates;
       local smoke test of the nginx config with the built site
       (`site/`, `data/`, `nginx/` laid out as on the server); README/DEPLOY updated

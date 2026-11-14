@@ -1,8 +1,25 @@
+import { useEffect, useState } from 'preact/hooks';
 import { SPOTS } from '../../shared/spots.ts';
 import { formatTime, formatWeekdayDate } from '../../shared/format.ts';
 import { isStale, shouldAlertFailures, useApp } from '../data.ts';
 
+function useOnline(): boolean {
+  const [online, setOnline] = useState(() => navigator.onLine);
+  useEffect(() => {
+    const up = () => setOnline(true);
+    const down = () => setOnline(false);
+    window.addEventListener('online', up);
+    window.addEventListener('offline', down);
+    return () => {
+      window.removeEventListener('online', up);
+      window.removeEventListener('offline', down);
+    };
+  }, []);
+  return online;
+}
+
 export function Header() {
+  const online = useOnline();
   const { forecast, spot, setSpotId, now, status, fetchStatus } = useApp();
   const stale = forecast ? isStale(forecast.generatedAt, now) : false;
   return (
@@ -26,7 +43,7 @@ export function Header() {
             zastaralá data
           </span>
         )}
-        {forecast && status === 'error' && <span class="chip">offline</span>}
+        {forecast && (status === 'error' || !online) && <span class="chip">offline</span>}
       </div>
       {shouldAlertFailures(fetchStatus) && (
         <p class="alert-warn" role="status">
