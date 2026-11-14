@@ -122,3 +122,17 @@ export interface BestWindow {
   /** Total rain, max gust, mean temperature over the window. */
   comfort: { rainMm: number; gustKmh: number; tempC: number };
 }
+
+/** `status.json`, written by the fetcher next to `forecast.json`. */
+export interface FetchStatus {
+  version: 1;
+  /** Unix seconds of the latest cron run start (retries do not count). */
+  lastAttemptAt: number;
+  lastSuccessAt: number | null;
+  /** Cron runs in a row that did not finish successfully, including hard kills. */
+  consecutiveFailures: number;
+  lastError: string | null;
+}
+
+/** Consecutive failed fetch runs after which the app warns the user. */
+export const FETCH_FAILURE_ALERT = 3;

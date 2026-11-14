@@ -8,7 +8,7 @@ if (!outDir) {
 }
 
 try {
-  console.log(await run({ outDir }));
+  console.log(await run({ outDir, retry: process.env.FETCH_RETRY === '1' }));
 } catch (e) {
   console.log(`${new Date().toISOString()} error ${e instanceof Error ? e.message : String(e)}`);
   process.exit(1);

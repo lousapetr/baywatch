@@ -31,4 +31,10 @@ services:
       - ./data:/data:z
     environment:
       - OUT_DIR=/data
-    command: ["node", "fetch.mjs"]
+    # Hard 120 s limit per attempt; one retry after 60 s (FETCH_RETRY=1 keeps it
+    # from counting as a second failure in status.json).
+    command:
+      - sh
+      - -c
+      - |
+        timeout -s KILL 120 node fetch.mjs || { sleep 60; FETCH_RETRY=1 timeout -s KILL 120 node fetch.mjs; }

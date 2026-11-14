@@ -8,7 +8,7 @@ projekt s vlastním Cloudflare tunelem – carstats se vůbec nedotkneme.
 notebook ──(scripts/deploy.sh: build + rsync)──► VM ~/baywatch/
                                                    ├─ site/       statický web
                                                    ├─ fetcher/    fetch.mjs (spouští cron)
-                                                   ├─ data/       forecast.json
+                                                   ├─ data/       forecast.json, status.json
                                                    ├─ nginx/      default.conf
                                                    ├─ docker-compose.yml
                                                    └─ .env        token tunelu
@@ -92,7 +92,21 @@ a přidej řádek (vedle zálohy carstats):
 
 Každou hodinu v :07 se na pár sekund spustí kontejner, stáhne data z Open-Meteo
 a přepíše `data/forecast.json`. Když stažení selže, starý soubor zůstane a web
-ukáže stáří dat. Carstats na 1GB stroji má zálohu ve 3:00 a updaty ve 4:00 –
+ukáže stáří dat.
+
+Odolnost proti zaseknutí: příkaz kontejneru v `docker-compose.yml` spouští
+`node fetch.mjs` s tvrdým limitem 120 s (`timeout -s KILL 120`). Při selhání
+nebo zaseknutí počká 60 s a zkusí to přesně jednou znovu (`FETCH_RETRY=1`),
+pak to nechá být do dalšího běhu cronu. Limit je v compose, ne v cronu, aby
+kill opravdu zabil node uvnitř kontejneru. Cron řádek se nemění.
+
+Fetcher při každém běhu zapisuje `data/status.json` (`consecutiveFailures`,
+`lastAttemptAt`, `lastSuccessAt`, `lastError`). Neúspěch se započítá už na
+začátku běhu, takže se počítá i násilné zabití; běh včetně opakování se
+počítá nejvýš jednou. Po úspěchu se počítadlo vynuluje. Když je
+`consecutiveFailures` aspoň 3 (tři hodiny v kuse), aplikace zobrazí upozornění.
+`status.json` je veřejný jako `forecast.json`; nginx ho posílá s
+`Cache-Control: no-cache`, ostatní `/data/` s `max-age=300`. Carstats na 1GB stroji má zálohu ve 3:00 a updaty ve 4:00 –
 krátký běh fetcheru jim nevadí.
 
 ## 5. Ověření
@@ -138,7 +152,8 @@ Aplikace se pak otevírá bez adresního řádku a bez signálu ukáže posledn�
 | 403 / prázdná stránka | prázdné nebo nečitelné `site/` – `ls -la site/`; na Oracle Linuxu se SELinuxem řeší přípona `:z` u volumes (už v compose) |
 | `forecast.json` 404 | fetcher ještě neběžel nebo padá: `docker compose run --rm fetcher` a přečti výstup |
 | `EACCES` ve fetcheru | `PUID`/`PGID` v `.env` neodpovídá vlastníkovi `data/` (`id`, `ls -ln data`) |
-| Data se neaktualizují | `crontab -l`, `tail fetch.log`, `systemctl status crond` |
+| Data se neaktualizují | `crontab -l`, `tail fetch.log`, `systemctl status crond`; `cat data/status.json` (počet selhání a `lastError`) |
+| Fetcher se zasekává (`status.json`: `consecutiveFailures` ≥ 3, v logu jen 137) | Open-Meteo nebo síť nereaguje; zkus `docker compose run --rm fetcher` ručně, `curl -sI https://marine-api.open-meteo.com`. Aplikace ukazuje upozornění, dokud se nepovede jeden běh |
 | Stará verze webu v mobilu | zavři a znovu otevři aplikaci; případně Cloudflare → Caching → Purge Everything |
 | rsync: command not found | `sudo dnf install -y rsync` na VM |
 
@@ -151,6 +166,8 @@ v repu připravené – řekni si a doplním.
 
 ## Neověřeno
 
+- Syntaxi busybox `timeout -s KILL 120 …` v `node:22-alpine` jsem neověřil v kontejneru
+  (logiku jsem ověřil jen s GNU `timeout`); první ruční běh `docker compose run --rm fetcher` to potvrdí.
 - `deploy/` a `scripts/deploy.sh` jsem psal bez možnosti je spustit proti serveru –
   první nasazení ber jako test.
 - Uživatel `opc`, uid 1000 a Oracle Linux předpokládám podle README carstats.

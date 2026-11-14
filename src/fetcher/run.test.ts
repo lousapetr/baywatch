@@ -21,13 +21,73 @@ const goodFetch = (async (url: string) =>
   ok(url.includes('marine-api') ? marineFixture() : weatherFixture())) as unknown as typeof fetch;
 const fast = { sleep: async () => {}, backoffMs: () => 0 };
 
+const failing = (async () => new Response('{}', { status: 500 })) as unknown as typeof fetch;
+const readStatus = async () => JSON.parse(await readFile(join(dir, 'status.json'), 'utf8'));
+
+describe('status.json', () => {
+  it('counts failed runs and resets on success', async () => {
+    for (const n of [1, 2, 3]) {
+      await expect(run({ outDir: dir, fetchFn: failing, retries: 0, now: 100 + n, ...fast })).rejects.toThrow();
+      const s = await readStatus();
+      expect(s.consecutiveFailures).toBe(n);
+      expect(s.lastAttemptAt).toBe(100 + n);
+      expect(s.lastError).toMatch(/500/);
+    }
+    await run({ outDir: dir, fetchFn: goodFetch, now: 200, ...fast });
+    expect(await readStatus()).toEqual({
+      version: 1,
+      lastAttemptAt: 200,
+      lastSuccessAt: 200,
+      consecutiveFailures: 0,
+      lastError: null,
+    });
+  });
+
+  it('does not count a retry attempt again', async () => {
+    await expect(run({ outDir: dir, fetchFn: failing, retries: 0, now: 1, ...fast })).rejects.toThrow();
+    await expect(run({ outDir: dir, fetchFn: failing, retries: 0, now: 2, retry: true, ...fast })).rejects.toThrow();
+    expect((await readStatus()).consecutiveFailures).toBe(1);
+    await run({ outDir: dir, fetchFn: goodFetch, now: 3, retry: true, ...fast });
+    expect((await readStatus()).consecutiveFailures).toBe(0);
+  });
+
+  it('keeps the last success time across failures', async () => {
+    await run({ outDir: dir, fetchFn: goodFetch, now: 50, ...fast });
+    await expect(run({ outDir: dir, fetchFn: failing, retries: 0, now: 60, ...fast })).rejects.toThrow();
+    const s = await readStatus();
+    expect(s).toMatchObject({ lastSuccessAt: 50, consecutiveFailures: 1, lastAttemptAt: 60 });
+  });
+
+  it('starts from defaults when the file is corrupt', async () => {
+    await writeFile(join(dir, 'status.json'), '{not json');
+    await expect(run({ outDir: dir, fetchFn: failing, retries: 0, now: 5, ...fast })).rejects.toThrow();
+    expect((await readStatus()).consecutiveFailures).toBe(1);
+  });
+
+  it('is already written when the run is killed mid-fetch', async () => {
+    await run({ outDir: dir, fetchFn: goodFetch, now: 10, ...fast });
+    const hang = (() => new Promise<Response>(() => {})) as unknown as typeof fetch;
+    void run({ outDir: dir, fetchFn: hang, now: 20, ...fast });
+    await vi.waitFor(async () => expect((await readStatus()).consecutiveFailures).toBe(1));
+    expect(await readStatus()).toMatchObject({ lastAttemptAt: 20, lastSuccessAt: 10 });
+  });
+
+  it('does not fail a successful run when status.json cannot be written', async () => {
+    await mkdir(join(dir, 'status.json.tmp'));
+    const line = await run({ outDir: dir, fetchFn: goodFetch, ...fast });
+    expect(line).toMatch(/ ok .* status write failed/);
+    expect(line).not.toContain('\n');
+    expect(JSON.parse(await readFile(join(dir, 'forecast.json'), 'utf8')).version).toBe(1);
+  });
+});
+
 describe('run', () => {
   it('writes forecast.json atomically and logs one line', async () => {
     const out = join(dir, 'nested', 'data');
     const line = await run({ outDir: out, fetchFn: goodFetch, now: 1794650000, ...fast });
     expect(line).toMatch(/ok \d+ bytes cells: .*costa-quebrada\+canallave/);
     expect(line).not.toContain('\n');
-    expect(await readdir(out)).toEqual(['forecast.json']);
+    expect(await readdir(out)).toEqual(['forecast.json', 'status.json']);
     const f = JSON.parse(await readFile(join(out, 'forecast.json'), 'utf8'));
     expect(f.version).toBe(1);
     expect(f.generatedAt).toBe(1794650000);
@@ -40,7 +100,7 @@ describe('run', () => {
     const failing = (async () => new Response('{}', { status: 500 })) as unknown as typeof fetch;
     await expect(run({ outDir: dir, fetchFn: failing, retries: 0, ...fast })).rejects.toThrow();
     expect(await readFile(file, 'utf8')).toBe('OLD');
-    expect(await readdir(dir)).toEqual(['forecast.json']);
+    expect((await readdir(dir)).sort()).toEqual(['forecast.json', 'status.json']);
   });
 
   it('reports a multi-location fallback in the log line', async () => {
@@ -73,6 +133,6 @@ describe('run', () => {
       ok(url.includes('marine-api') ? bad : weatherFixture())) as unknown as typeof fetch;
     await expect(run({ outDir: dir, fetchFn, retries: 0, ...fast })).rejects.toThrow();
     expect(await readFile(file, 'utf8')).toBe('OLD');
-    expect(await readdir(dir)).toEqual(['forecast.json']);
+    expect((await readdir(dir)).sort()).toEqual(['forecast.json', 'status.json']);
   });
 });
