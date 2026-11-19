@@ -215,7 +215,8 @@ interface FetchStatus {
 
 ## 5. Spots (`src/shared/spots.ts`)
 
-The spots span ~37 km of coast, more than one ~8 km marine grid cell. Spots
+The spots span ~37 km of Cantabrian coast plus two Bizkaia spots ~80–105 km
+east of Santander, more than one ~8 km marine grid cell. Spots
 are grouped by the marine grid point they snap to; each group (cell) is
 fetched once and its spots share that hourly data, differing only in
 `facingDeg` and `tideWeight`. Tide and sunrise/sunset are taken from the
@@ -225,6 +226,10 @@ Coordinates and orientations are **estimates – verify on a map** and adjust.
 The marine grid is land-masked and snaps to the nearest sea cell: `canallave`
 uses the cell ~10 km N (shared with `costa-quebrada`), `punta-afuera` the cell
 ~7 km WSW. No closer sea cells exist (checked 2026-11-14); kept as is.
+`gaztelugatxe` snaps to `43.4583,-2.875` (~7 km W), `lekeitio` to
+`43.4583,-2.4583` (~10 km NNE) (checked 2026-11-19). The Bizkaia spots still use
+the Santander tide (IHM table / default spot's cell) and its sunrise/sunset
+(~4 min earlier there) – by choice.
 
 | id | name | lat, lon | facingDeg | tideWeight | note |
 | --- | --- | --- | --- | --- | --- |
@@ -235,6 +240,8 @@ uses the cell ~10 km N (shared with `costa-quebrada`), `punta-afuera` the cell
 | `cabo-ajo` | Cabo de Ajo | 43.512, −3.587 | 0 | 0.3 | northernmost cape of Cantabria, very exposed |
 | `canallave` | Playa de Canallave | 43.450, −3.962 | 330 | 0.3 | exposed surf beach by the Liencres dunes |
 | `punta-afuera` | Punta del Torco de Afuera (Suances) | 43.442, −4.043 | 0 | 0.3 | headland with the Suances lighthouse at the river mouth |
+| `gaztelugatxe` | San Juan de Gaztelugatxe | 43.4466, −2.7853 | 0 | 0.3 | rock islet with the hermitage (Bizkaia) |
+| `lekeitio` | Lekeitio (Faro de Santa Catalina) | 43.371, −2.497 | 20 | 0.3 | cliffs under the Santa Catalina lighthouse (Bizkaia) |
 
 Fetch points: marine at every spot's own coordinates (the API snaps them to
 grid points, which define the groups); weather at the coordinates of the

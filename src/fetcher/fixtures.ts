@@ -1,4 +1,4 @@
-// Test helper: recorded API responses (2026-11-14), requested for all SPOTS.
+// Test helper: recorded API responses for all SPOTS (2026-11-14…21; the last two spots fetched 2026-11-19 by date).
 
 import { readFileSync } from 'node:fs';
 import type { MarineResponse, WeatherResponse } from './openMeteo.ts';

@@ -77,6 +77,24 @@ export const SPOTS: readonly Spot[] = [
     tideWeight: 0.3,
     note: 'Mys s majákem u ústí řeky v Suances.',
   },
+  {
+    id: 'gaztelugatxe',
+    name: 'San Juan de Gaztelugatxe',
+    lat: 43.4466,
+    lon: -2.7853,
+    facingDeg: 0,
+    tideWeight: 0.3,
+    note: 'Skalní ostrůvek s poustevnou, vlny se tříští pod schodištěm.',
+  },
+  {
+    id: 'lekeitio',
+    name: 'Lekeitio (Faro de Santa Catalina)',
+    lat: 43.371,
+    lon: -2.497,
+    facingDeg: 20,
+    tideWeight: 0.3,
+    note: 'Útesy pod majákem Santa Catalina kousek od přístavu.',
+  },
 ];
 
 export function getSpot(id: string): Spot | undefined {
