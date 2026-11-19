@@ -29,7 +29,7 @@ describe('wave power', () => {
 describe('star reference points', () => {
   it('1 m / 8 s is calm', () => {
     expect(wavePower(1, 8)).toBe(4);
-    expect(stars(1, 8)).toBe(0);
+    expect(stars(1, 8)).toBe(0.4);
   });
   it('matches the reference powers', () => {
     expect(wavePower(2, 10)).toBe(20);
@@ -37,10 +37,10 @@ describe('star reference points', () => {
     expect(wavePower(4, 14)).toBe(112);
     expect(wavePower(5, 15)).toBe(187.5);
   });
-  it('2 m / 10 s', () => expect(stars(2, 10)).toBe(1.3));
-  it('3 m / 12 s', () => expect(stars(3, 12)).toBe(2.8));
-  it('4 m / 14 s', () => expect(stars(4, 14)).toBe(3.9));
-  it('5 m / 15 s', () => expect(stars(5, 15)).toBe(4.8));
+  it('2 m / 10 s', () => expect(stars(2, 10)).toBe(2.3));
+  it('3 m / 12 s', () => expect(stars(3, 12)).toBe(3.7));
+  it('4 m / 14 s', () => expect(stars(4, 14)).toBe(4.8));
+  it('5 m / 15 s', () => expect(stars(5, 15)).toBe(5));
 });
 
 describe('starsFromPower', () => {
@@ -56,7 +56,7 @@ describe('starsFromPower', () => {
     expect(scoreHour({ powerKwM: 100, swellDir: NaN, facingDeg: 0, tideWeight: 0.3, tideNorm: 1 })).toBe(0);
   });
   it('rounds to one decimal', () => {
-    expect(starsFromPower(17)).toBe(1.1);
+    expect(starsFromPower(17)).toBe(2.1);
   });
   it('is monotonic', () => {
     let prev = 0;
@@ -96,7 +96,7 @@ describe('tideFactor', () => {
 describe('scoreHour', () => {
   const base = { swellDir: 0, facingDeg: 0, tideWeight: 0.4, tideNorm: 1 };
   it('equals the plain stars at full factors', () => {
-    expect(scoreHour({ ...base, powerKwM: wavePower(3, 12) })).toBe(2.8);
+    expect(scoreHour({ ...base, powerKwM: wavePower(3, 12) })).toBe(3.7);
   });
   it('is lower at low tide and off-axis', () => {
     const high = scoreHour({ ...base, powerKwM: 100 });

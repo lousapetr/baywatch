@@ -30,12 +30,12 @@ export function tideFactor(tideWeight: number, tideNorm: number): number {
 
 /** Piecewise-linear [kW/m, stars] knots. */
 export const STAR_THRESHOLDS: readonly (readonly [number, number])[] = [
-  [5, 0],
-  [15, 1],
-  [30, 2],
-  [60, 3],
-  [120, 4],
-  [200, 5],
+  [2.4, 0],
+  [6.7, 1],
+  [15.9, 2],
+  [31.6, 3],
+  [64.2, 4],
+  [121.6, 5],
 ];
 
 /** Stars 0–5, one decimal, from effective power in kW/m; non-finite input gives 0. */

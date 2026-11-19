@@ -62,6 +62,7 @@ src/fetcher/   Open-Meteo client, forecast assembly, status file, fixtures
 src/web/       Preact app (pages/, components/), public/ (icons, dev data)
 deploy/        docker-compose.yml and nginx config copied to the server
 scripts/       deploy.sh (laptop-side deploy), smoke.sh (nginx smoke test)
+tools/calibration/  star-threshold calibration: history script + histogram page
 docs/          PLAN.md, DEPLOY.md
 ```
 

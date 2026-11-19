@@ -283,12 +283,14 @@ eff     = power · fDir · fTide
 ```
 
 Stars from `eff` by piecewise-linear interpolation between thresholds
-(kW/m → stars): `5→0, 15→1, 30→2, 60→3, 120→4, 200→5`, clamped to 0–5,
-one decimal. Thresholds live in one exported constant.
+(kW/m → stars): `2.4→0, 6.7→1, 15.9→2, 31.6→3, 64.2→4, 121.6→5`, clamped to
+0–5, one decimal. Thresholds live in one exported constant. Calibrated on
+2026-11-19 against Open-Meteo Marine history for November 2023–2025 at
+san-juan-canal, costa-quebrada and cabo-mayor (effective power, all hours).
 
-Reference points for tests (fDir = fTide = 1): 1 m/8 s → 4 kW/m → 0★;
-2 m/10 s → 20 → ~1.3★; 3 m/12 s → 54 → ~2.8★; 4 m/14 s → 112 → ~3.9★;
-5 m/15 s → 187 → ~4.8★.
+Reference points for tests (fDir = fTide = 1): 1 m/8 s → 4 kW/m → 0.4★;
+2 m/10 s → 20 → 2.3★; 3 m/12 s → 54 → 3.7★; 4 m/14 s → 112 → 4.8★;
+5 m/15 s → 187 → 5★.
 
 Czech labels for integer stars: 0 „klid“, 1 „slabé“, 2 „ujde“, 3 „pěkné“,
 4 „velké“, 5 „bouře – výjimečné“.
