@@ -16,6 +16,7 @@ export function Tides() {
   if (!forecast) return null;
   const { tide, days } = forecast;
   const off = tide.datumOffsetM;
+  const tableUntil = tide.tableUntil ?? null;
   const today = localDate(now);
   const selected = selectDay(
     route.params['d'],
@@ -101,10 +102,18 @@ export function Tides() {
             </div>
           );
         })}
-        <p class="muted small footnote">
-          Časy jsou orientační (±30 min), jde o modelová data, ne o údaje pro navigaci ani plavbu. Výšky jsou přepočtené na
-          přibližné mořské datum (+{formatNumber(off)} m) a mohou se o desítky centimetrů lišit od oficiálních tabulek.
-        </p>
+        {tableUntil !== null ? (
+          <p class="muted small footnote">
+            Do {formatWeekdayDate(tableUntil)} jsou časy a výšky z oficiální předpovědi Instituto Hidrográfico de la Marina
+            pro přístav Santander (výšky nad nulou přístavu); na okolních plážích se mohou lišit o několik minut. Dál jde o
+            modelová data, orientační (±30 min). Nejde o údaje pro navigaci ani plavbu.
+          </p>
+        ) : (
+          <p class="muted small footnote">
+            Časy jsou orientační (±30 min), jde o modelová data, ne o údaje pro navigaci ani plavbu. Výšky jsou přepočtené na
+            přibližné mořské datum (+{formatNumber(off)} m) a mohou se o desítky centimetrů lišit od oficiálních tabulek.
+          </p>
+        )}
       </section>
     </>
   );

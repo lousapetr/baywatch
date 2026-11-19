@@ -33,7 +33,9 @@ export function About() {
       <p>
         Vlny, příliv a počasí pocházejí z modelů služby <Ext href="https://open-meteo.com/">Open-Meteo.com</Ext> (Marine
         Weather API a Weather Forecast API), licence{' '}
-        <Ext href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</Ext>. Předpověď se stahuje na serveru každou
+        <Ext href="https://creativecommons.org/licenses/by/4.0/">CC BY 4.0</Ext>. Příliv je na dny, pro které je k dispozici,
+        nahrazený oficiální předpovědí pro přístav Santander od{' '}
+        <Ext href="https://armada.defensa.gob.es/ihm/">Instituto Hidrográfico de la Marina</Ext>. Předpověď se stahuje na serveru každou
         hodinu; aplikace sama žádné cizí služby nevolá, nepoužívá cookies ani analytiku.
       </p>
 
@@ -41,8 +43,9 @@ export function About() {
       <ul>
         <li>Jde o modelovou předpověď s rozlišením zhruba 8 km, vzdálenější dny jsou méně spolehlivé.</li>
         <li>
-          Časy přílivu a odlivu jsou orientační (±30 min, model bývá o 15–30 min dřív než tabulky), výšky jsou vztažené
-          k nule námořních map. Nepoužívejte pro navigaci.
+          Časy přílivu a odlivu z oficiální předpovědi platí pro přístav Santander, na okolních plážích se mohou lišit o
+          několik minut. Mimo ni jde o model (±30 min, bývá dřív než tabulky). Výšky jsou vztažené k nule námořních map.
+          Nepoužívejte pro navigaci.
         </li>
         <li>
           Model vidí otevřené moře, ne tvar pobřeží: místní vlny u útesů se mohou lišit, některá místa sdílejí společný

@@ -72,6 +72,18 @@ Verified 2026-11-14 (M2):
 - Sandbox note: Node's `fetch` ignores `HTTPS_PROXY` unless
   `NODE_USE_ENV_PROXY=1` (only relevant behind a proxy).
 
+Verified 2026-11-19 (official tide table):
+- IHM API `https://ideihm.covam.es/api-ihm/getmarea?request=gettide&id=3&format=json&month=YYYYMM`
+  (station list: `request=getlist`; Santander = id 3, 43.4617/-3.79) returns a month of
+  extremes (`hora`, `altura`, `tipo` pleamar/bajamar). Timezone and datum are not stated in
+  the response; times are **UTC** (confirmed by the user on IHM's own table: 2026-11-19 high
+  10:58 UTC; +1 h also matches tide-forecast.com and tablademareas.com CET tables within
+  0–12 min), heights are ~2.45 m above the MSL table of tablademareas.com (chart datum).
+  Docs page `/api-ihm/` returns 403. Not reachable from the sandbox with curl (web fetch only).
+- Open-Meteo vs IHM on 2026-11-19: model extremes ~20–45 min early.
+- `src/fetcher/tideTable.ts` holds a one-off copy for 2026-11-19…2026-12-12; the
+  fetcher uses it where it overlaps and falls back to the model after that.
+
 Not verified – check when you get there:
 - Spot coordinates and coast orientations in §5 (estimates).
 - Tide differences between spots along the coast (assumed within ±30 min).
@@ -140,6 +152,7 @@ interface Forecast {
     levelMsl: number[];             // 15-min series
     extremes: { time: number; levelMsl: number; type: 'high' | 'low' }[];
     days: { date: string; rangeM: number }[];   // max daily range → spring/neap hint
+    tableUntil: number | null;      // last extreme from the official table (IHM); null = model only
   };
   days: { date: string; sunrise: number; sunset: number }[];   // date = YYYY-MM-DD in Europe/Madrid
   spots: SpotForecast[];

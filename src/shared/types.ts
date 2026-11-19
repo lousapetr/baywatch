@@ -39,6 +39,8 @@ export interface TideForecast {
   levelMsl: number[];
   extremes: TideExtreme[];
   days: TideDay[];
+  /** Last extreme taken from the official tide table; null when all data is from the model. */
+  tableUntil: number | null;
 }
 
 export interface DayInfo {

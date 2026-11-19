@@ -3,6 +3,7 @@ import { localDate } from '../shared/format.ts';
 import { SPOTS } from '../shared/spots.ts';
 import { buildForecast, DATUM_OFFSET_M, groupCells } from './build.ts';
 import { marineFixture, weatherFixture } from './fixtures.ts';
+import { TIDE_TABLE } from './tideTable.ts';
 
 const NOW = 1794650000;
 const build = () => buildForecast({ now: NOW, spots: SPOTS, marine: marineFixture(), weather: weatherFixture() });
@@ -101,6 +102,21 @@ describe('buildForecast (fixtures)', () => {
     expect(t.levelMsl).toHaveLength(8 * 96);
     expect(t.extremes.length).toBeGreaterThan(24);
     expect(t.days.length).toBeGreaterThanOrEqual(7);
+  });
+
+  it('uses the official table where it overlaps the fixture window', () => {
+    const t = f.tide;
+    const first = TIDE_TABLE.extremes[0]!;
+    expect(t.tableUntil).not.toBeNull();
+    const e = t.extremes.find((x) => x.time === first.time)!;
+    expect(e.levelMsl + t.datumOffsetM).toBeCloseTo(first.heightM, 2);
+    expect(f.attribution.map((a) => a.name)).toContain(TIDE_TABLE.name);
+  });
+
+  it('falls back to the model without a table', () => {
+    const g = buildForecast({ now: NOW, spots: SPOTS, marine: marineFixture(), weather: weatherFixture(), tideTable: { ...TIDE_TABLE, extremes: [] } });
+    expect(g.tide.tableUntil).toBeNull();
+    expect(g.attribution.map((a) => a.name)).not.toContain(TIDE_TABLE.name);
   });
 
   it('emits one window per day per spot with plausible content', () => {

@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { dailyRanges, findExtremes, levelAt, tideNorm, tideStateAt, type TideSeries } from './tide.ts';
+import type { TideExtreme } from './types.ts';
+import { dailyRanges, findExtremes, levelAt, levelFromExtremes, mergeTable, tideNorm, tideStateAt, type TideSeries } from './tide.ts';
 
 const HOUR = 3600;
 const M2 = 12.4206012 * HOUR;
@@ -192,5 +193,63 @@ describe('dailyRanges', () => {
       { date: '2026-10-25', rangeM: 2 },
       { date: '2026-10-26', rangeM: 4 },
     ]);
+  });
+});
+
+describe('levelFromExtremes', () => {
+  const ex: TideExtreme[] = [
+    { time: 0, levelMsl: -1, type: 'low' },
+    { time: 6 * 3600, levelMsl: 1, type: 'high' },
+  ];
+  it('passes through the extremes and the midpoint', () => {
+    expect(levelFromExtremes(ex, 0)).toBeCloseTo(-1);
+    expect(levelFromExtremes(ex, 3 * 3600)).toBeCloseTo(0);
+    expect(levelFromExtremes(ex, 6 * 3600)).toBeCloseTo(1);
+  });
+  it('is null outside the range', () => {
+    expect(levelFromExtremes(ex, -1)).toBeNull();
+    expect(levelFromExtremes(ex, 6 * 3600 + 1)).toBeNull();
+  });
+});
+
+describe('mergeTable', () => {
+  const H = 3600;
+  const step = 900;
+  // Model: 12 h cosine, highs at 0, 12 h, 24 h…, amplitude 1, 48 h long.
+  const levelMsl = Array.from({ length: 48 * 4 + 1 }, (_, i) => Math.cos((2 * Math.PI * i * step) / (12 * H)));
+  const series = { start: 0, step, levelMsl };
+  const model = findExtremes(series);
+  // Table: 30 min later and 0.2 m higher, from 12 h to 30 h.
+  const table: TideExtreme[] = [12, 18, 24, 30].map((h, i) => ({
+    time: h * H + 30 * 60,
+    levelMsl: (i % 2 ? -1 : 1) + 0.2,
+    type: i % 2 ? 'low' : 'high',
+  }));
+
+  it('uses the table inside its range and the model outside', () => {
+    const m = mergeTable(series, model, table);
+    expect(m.tableUntil).toBe(table[3]!.time);
+    expect(m.levelMsl[(12 * H + 30 * 60) / step]).toBeCloseTo(1.2);
+    expect(m.levelMsl[0]).toBeCloseTo(1);
+    expect(m.levelMsl[(46 * H) / step]).toBeCloseTo(levelMsl[(46 * H) / step]!);
+    const times = m.extremes.map((e) => e.time / H);
+    expect(times.filter((t) => t >= 12 && t <= 31)).toEqual([12.5, 18.5, 24.5, 30.5]);
+    expect(times.some((t) => t < 9)).toBe(true);
+    expect(times.some((t) => t > 33)).toBe(true);
+    for (let i = 1; i < m.extremes.length; i++) expect(m.extremes[i]!.type).not.toBe(m.extremes[i - 1]!.type);
+  });
+
+  it('blends the edge mismatch without a jump', () => {
+    const m = mergeTable(series, model, table);
+    // Steepest model change per sample is 2π/48 ≈ 0.13 m.
+    for (let i = 1; i < m.levelMsl.length; i++) expect(Math.abs(m.levelMsl[i]! - m.levelMsl[i - 1]!)).toBeLessThan(0.16);
+  });
+
+  it('keeps the model when the table does not overlap', () => {
+    const far = table.map((e) => ({ ...e, time: e.time + 100 * H }));
+    const m = mergeTable(series, model, far);
+    expect(m.tableUntil).toBeNull();
+    expect(m.levelMsl).toEqual(levelMsl);
+    expect(m.extremes).toEqual(model);
   });
 });

@@ -114,3 +114,57 @@ export function dailyRanges(extremes: TideExtreme[]): TideDay[] {
     .sort(([a], [b]) => (a < b ? -1 : 1))
     .map(([date, e]) => ({ date, rangeM: Math.round((e.hi - e.lo) * 100) / 100 }));
 }
+
+/** Model correction at the edges of a table fades out linearly over this time. */
+const BLEND_S = 6 * 3600;
+/** Model extremes closer than this to the table's range are dropped. */
+const EDGE_GAP_S = 3 * 3600;
+
+/** Cosine curve through consecutive extremes; null outside their range. */
+export function levelFromExtremes(extremes: readonly TideExtreme[], t: number): number | null {
+  for (let i = 1; i < extremes.length; i++) {
+    const a = extremes[i - 1]!;
+    const b = extremes[i]!;
+    if (t < a.time || t > b.time) continue;
+    const x = (t - a.time) / (b.time - a.time);
+    return a.levelMsl + ((b.levelMsl - a.levelMsl) * (1 - Math.cos(Math.PI * x))) / 2;
+  }
+  return null;
+}
+
+/**
+ * Replaces the model series and extremes by table extremes (MSL heights) where
+ * the table covers them. Outside the table the model is kept, shifted by the
+ * edge mismatch fading out over 6 h. `tableUntil` is the last table extreme
+ * used, null when the table does not overlap the series.
+ */
+export function mergeTable(
+  series: TideSeries,
+  modelExtremes: readonly TideExtreme[],
+  table: readonly TideExtreme[],
+): { levelMsl: number[]; extremes: TideExtreme[]; tableUntil: number | null } {
+  const { start, step } = series;
+  const end = start + (series.levelMsl.length - 1) * step;
+  const first = table[0];
+  const last = table[table.length - 1];
+  if (!first || !last || last.time < start || first.time > end) {
+    return { levelMsl: [...series.levelMsl], extremes: [...modelExtremes], tableUntil: null };
+  }
+  const dFirst = first.levelMsl - levelAt(series, first.time);
+  const dLast = last.levelMsl - levelAt(series, last.time);
+  const levelMsl = series.levelMsl.map((v, i) => {
+    const t = start + i * step;
+    const fromTable = levelFromExtremes(table, t);
+    if (fromTable !== null) return fromTable;
+    const [d, dt] = t < first.time ? [dFirst, first.time - t] : [dLast, t - last.time];
+    return v + d * Math.max(0, 1 - dt / BLEND_S);
+  });
+  const inTable = table.filter((e) => e.time >= start && e.time <= end);
+  const before = modelExtremes.filter((e) => e.time < first.time - EDGE_GAP_S);
+  const after = modelExtremes.filter((e) => e.time > last.time + EDGE_GAP_S);
+  // Types must alternate across the seams.
+  if (before.at(-1)?.type === first.type) before.pop();
+  if (after[0]?.type === last.type) after.shift();
+  const extremes = [...before, ...inTable, ...after];
+  return { levelMsl, extremes, tableUntil: inTable.length ? inTable[inTable.length - 1]!.time : null };
+}

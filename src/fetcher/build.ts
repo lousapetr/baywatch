@@ -3,12 +3,13 @@
 import { localDate } from '../shared/format.ts';
 import { combinedPower, scoreHour } from '../shared/score.ts';
 import { DEFAULT_SPOT_ID, type Spot } from '../shared/spots.ts';
-import { dailyRanges, findExtremes, tideNorm, type TideSeries } from '../shared/tide.ts';
+import { dailyRanges, findExtremes, mergeTable, tideNorm, type TideSeries } from '../shared/tide.ts';
 import type { CellForecast, CellHourly, DayInfo, Forecast, SpotForecast } from '../shared/types.ts';
 import { bestWindows } from '../shared/windows.ts';
 import { HOURS, type MarineResponse, type Point, type WeatherResponse } from './openMeteo.ts';
+import { TIDE_TABLE, type TideTable } from './tideTable.ts';
 
-/** Rough offset from mean sea level to Spanish chart datum, m (estimate, one day of comparison). */
+/** Offset from mean sea level to Spanish chart datum, m (estimate; IHM table minus published MSL table ≈ 2.45). */
 export const DATUM_OFFSET_M = 2.5;
 
 export const ATTRIBUTION = [
@@ -105,6 +106,8 @@ export interface BuildInput {
   marine: readonly MarineResponse[];
   /** Parallel to `groupCells(spots, marine)`. */
   weather: readonly WeatherResponse[];
+  /** Official extremes replacing the model where they cover it. */
+  tideTable?: TideTable;
 }
 
 export function buildForecast(input: BuildInput): Forecast {
@@ -137,20 +140,29 @@ export function buildForecast(input: BuildInput): Forecast {
 
   // Tide from the default spot's marine response
   const m15 = marine[defaultIdx]!.minutely_15;
-  const levelMsl = mapRound(fill(m15.sea_level_height_msl), 2);
-  const series: TideSeries = { start: m15.time[0]!, step: 900, levelMsl };
-  const extremes = findExtremes(series).map((e) => ({ ...e, levelMsl: round(e.levelMsl, 2) }));
+  const model: TideSeries = { start: m15.time[0]!, step: 900, levelMsl: fill(m15.sea_level_height_msl) };
+  const table = input.tideTable ?? TIDE_TABLE;
+  const merged = mergeTable(
+    model,
+    findExtremes(model),
+    table.extremes.map((e) => ({ time: e.time, levelMsl: e.heightM - DATUM_OFFSET_M, type: e.type })),
+  );
+  const series: TideSeries = { ...model, levelMsl: mapRound(merged.levelMsl, 2) };
+  const extremes = merged.extremes.map((e) => ({ ...e, levelMsl: round(e.levelMsl, 2) }));
   const tide = {
     datumOffsetM: DATUM_OFFSET_M,
     step: 900 as const,
     start: series.start,
-    levelMsl,
+    levelMsl: series.levelMsl,
     extremes,
     days: dailyRanges(extremes),
+    tableUntil: merged.tableUntil,
   };
 
   // Spots
   const dates = days.map((d) => d.date);
+  const attribution = merged.tableUntil === null ? ATTRIBUTION : [...ATTRIBUTION, { name: table.name, url: table.url }];
+
   const spotForecasts: SpotForecast[] = spots.map((s, i) => {
     const gi = groups.findIndex((g) => g.spotIdx.includes(i));
     const h = hourlyByCell[gi]!;
@@ -181,7 +193,7 @@ export function buildForecast(input: BuildInput): Forecast {
     version: 1,
     generatedAt: input.now,
     timezone: 'Europe/Madrid',
-    attribution: ATTRIBUTION,
+    attribution,
     time,
     isDay,
     cells,
