@@ -19,6 +19,7 @@ describe('groupCells', () => {
       ['43.4583,-4.125', ['punta-afuera']],
       ['43.4583,-2.875', ['gaztelugatxe']],
       ['43.4583,-2.4583', ['lekeitio']],
+      ['39.7083,-9.125', ['nazare']],
     ]);
     expect(g[1]!.weatherPoint).toEqual({ lat: SPOTS[1]!.lat, lon: SPOTS[1]!.lon });
   });
@@ -35,7 +36,7 @@ describe('buildForecast (fixtures)', () => {
     expect(f.attribution[0]!.url).toContain('open-meteo.com');
     expect(f.time).toHaveLength(n);
     expect(f.isDay).toHaveLength(n);
-    expect(f.cells).toHaveLength(7);
+    expect(f.cells).toHaveLength(8);
     expect(f.spots).toHaveLength(SPOTS.length);
     expect(f.days).toHaveLength(8);
   });

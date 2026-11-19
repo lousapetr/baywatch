@@ -91,7 +91,7 @@ describe('run', () => {
     const f = JSON.parse(await readFile(join(out, 'forecast.json'), 'utf8'));
     expect(f.version).toBe(1);
     expect(f.generatedAt).toBe(1794650000);
-    expect(f.cells).toHaveLength(7);
+    expect(f.cells).toHaveLength(8);
   });
 
   it('leaves the previous file untouched when the fetch fails', async () => {

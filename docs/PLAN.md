@@ -216,7 +216,7 @@ interface FetchStatus {
 ## 5. Spots (`src/shared/spots.ts`)
 
 The spots span ~37 km of Cantabrian coast plus two Bizkaia spots ~80–105 km
-east of Santander, more than one ~8 km marine grid cell. Spots
+east of Santander and one far-off curiosity (`nazare`, Portugal), more than one ~8 km marine grid cell. Spots
 are grouped by the marine grid point they snap to; each group (cell) is
 fetched once and its spots share that hourly data, differing only in
 `facingDeg` and `tideWeight`. Tide and sunrise/sunset are taken from the
@@ -230,6 +230,10 @@ uses the cell ~10 km N (shared with `costa-quebrada`), `punta-afuera` the cell
 `43.4583,-2.4583` (~10 km NNE) (checked 2026-11-19). The Bizkaia spots still use
 the Santander tide (IHM table / default spot's cell) and its sunrise/sunset
 (~4 min earlier there) – by choice.
+`nazare` snaps to `39.7083,-9.125` (~12 km N; nearest sea cell `39.625,-9.2083`
+is ~10 km W, no better) (checked 2026-11-19). It is listed for interest only:
+it also uses the Santander tide and sunrise/sunset, which are off for Portugal
+(sun ~35 min later), and the grid cannot resolve the canyon's wave focusing.
 
 | id | name | lat, lon | facingDeg | tideWeight | note |
 | --- | --- | --- | --- | --- | --- |
@@ -242,6 +246,7 @@ the Santander tide (IHM table / default spot's cell) and its sunrise/sunset
 | `punta-afuera` | Punta del Torco de Afuera (Suances) | 43.442, −4.043 | 0 | 0.3 | headland with the Suances lighthouse at the river mouth |
 | `gaztelugatxe` | San Juan de Gaztelugatxe | 43.4466, −2.7853 | 0 | 0.3 | rock islet with the hermitage (Bizkaia) |
 | `lekeitio` | Lekeitio (Faro de Santa Catalina) | 43.371, −2.497 | 20 | 0.3 | cliffs under the Santa Catalina lighthouse (Bizkaia) |
+| `nazare` | Nazaré (Praia do Norte) | 39.605, −9.086 | 290 | 0.3 | big-wave beach over the Nazaré Canyon, seen from the fort (Portugal) |
 
 Fetch points: marine at every spot's own coordinates (the API snaps them to
 grid points, which define the groups); weather at the coordinates of the

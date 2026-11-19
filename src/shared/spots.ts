@@ -95,6 +95,15 @@ export const SPOTS: readonly Spot[] = [
     tideWeight: 0.3,
     note: 'Útesy pod majákem Santa Catalina kousek od přístavu.',
   },
+  {
+    id: 'nazare',
+    name: 'Nazaré (Praia do Norte)',
+    lat: 39.605,
+    lon: -9.086,
+    facingDeg: 290,
+    tideWeight: 0.3,
+    note: 'Pro zajímavost: obří vlny nad podmořským kaňonem, výhled z pevnosti s majákem.',
+  },
 ];
 
 export function getSpot(id: string): Spot | undefined {
